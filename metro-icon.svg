@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="32"
+   height="32"
+   viewBox="0 0 32 32"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   sodipodi:docname="metro-icon.svg"
+   inkscape:export-filename="metro-icon.png"
+   inkscape:export-xdpi="384"
+   inkscape:export-ydpi="384"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#1a1a1a"
+     bordercolor="#111111"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="1"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="px"
+     inkscape:zoom="45.254834"
+     inkscape:cx="25.301164"
+     inkscape:cy="18.163805"
+     inkscape:window-width="1366"
+     inkscape:window-height="699"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g9"
+     showgrid="true">
+    <inkscape:grid
+       id="grid1"
+       units="px"
+       originx="0"
+       originy="0"
+       spacingx="0.5"
+       spacingy="0.5"
+       empcolor="#0099e5"
+       empopacity="0.30196078"
+       color="#0099e5"
+       opacity="0.14901961"
+       empspacing="8"
+       enabled="true"
+       visible="true" />
+  </sodipodi:namedview>
+  <defs
+     id="defs1">
+    <inkscape:path-effect
+       effect="powerclip"
+       message=""
+       id="path-effect12"
+       is_visible="true"
+       lpeversion="1"
+       inverse="true"
+       flatten="false"
+       hide_clip="false" />
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <g
+       id="g9"
+       transform="translate(-0.5,1)">
+      <path
+         style="font-style:italic;font-weight:bold;font-size:32px;font-family:'Inter Display';-inkscape-font-specification:'Inter Display Bold';fill:#c1c5cc;fill-opacity:1;stroke:#3e434d;stroke-width:2;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+         d="M 3,24 6.5,10 25,6 c 5,-1.0810811 6,2 5,6 l -3,12 h -4 l 2,-8 c 1,-4 -3,-4 -4,0 l -2,8 h -4 l 2,-8 c 1,-4 -3,-4 -4,0 l -2,8 z"
+         id="text1-1"
+         aria-label="m"
+         sodipodi:nodetypes="ccsccccccccccc"
+         clip-path="none" />
+      <path
+         style="fill:#3e434d;fill-opacity:1;stroke:none;stroke-width:2;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+         d="m 4,18 0.5,-1 h 9 L 13,18 Z"
+         id="path7"
+         sodipodi:nodetypes="ccccc" />
+      <path
+         style="fill:#3e434d;fill-opacity:1;stroke:none;stroke-width:2;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+         d="m 16,18 0.5,-1 h 5 L 21,18 Z"
+         id="path8"
+         sodipodi:nodetypes="ccccc" />
+      <path
+         style="fill:#3e434d;fill-opacity:1;stroke:none;stroke-width:2;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+         d="m 24,18 0.5,-1 h 5 L 29,18 Z"
+         id="path9"
+         sodipodi:nodetypes="ccccc" />
+      <path
+         style="fill:#ff5555;fill-opacity:1;stroke-width:0.01;stroke:#ff5555;stroke-opacity:1;paint-order:stroke fill markers;stroke-dasharray:none"
+         d="m 3,24 1.5,-6 h 8 L 11,24 Z"
+         id="path6"
+         sodipodi:nodetypes="ccccc" />
+      <path
+         style="fill:#ffd533;fill-opacity:1;stroke-width:0.01;stroke:#ffd533;stroke-opacity:1;stroke-dasharray:none;paint-order:stroke fill markers"
+         d="m 15,24 h 4 l 1.5,-6 h -4 z"
+         id="path5"
+         sodipodi:nodetypes="ccccc" />
+      <path
+         style="fill:#55ff55;fill-opacity:1;stroke-width:0.01;stroke:#55ff55;stroke-opacity:1;stroke-dasharray:none;paint-order:stroke fill markers"
+         d="m 24.5,18 h 4 L 27,24 h -4 z"
+         id="path4"
+         sodipodi:nodetypes="ccccc" />
+    </g>
+  </g>
+</svg>

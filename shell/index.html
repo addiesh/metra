@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        html, body {
+            display: block;
+            position: fixed;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: transparent;
+        }
+
+        canvas#metro {
+            position: fixed;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: transparent;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="metro">
+        <h1>The Metro Engine requires JavaScript and WebGL 2</h1>
+        <p>Please enable these features if disabled (or upgrade to a browser that supports them, if applicable)</p>
+    </canvas>
+</body>
+
+<script type="module">
+    /** @type {HTMLCanvasElement} */
+    const canvas = document.getElementById('metro');
+    /** @type {WebGL2RenderingContext} */
+    const gl = canvas.getContext('webgl2');
+
+    const wasmContext = {
+        /** @type {?WebAssembly.Instance} */
+        metro: null,
+    }
+
+    const importObject = {
+        metroSys: {
+            getTime: function() {
+                // TODO: stub...?
+                return performance.now();
+            },
+            
+            /**
+             * Creates a handle to model data.
+             * @param {number} positions_ptr
+             * @param {number} positions_len
+             * @param {number} coordinates_ptr
+             * @param {number} coordinates_len
+             * @param {number} indices_ptr
+             * @param {number} indices_len
+             * @return A valid u32 handle, or 0 on error.
+             */
+            createModel: function(
+                positionsPtr,
+                positionsLen,
+                coordinatesPtr,
+                coordinatesLen,
+                indicesPtr,
+                indicesLen,
+            ) {
+                // TODO: stub
+                return 0;
+            },
+
+		    // Frees a previously created handle to model data.
+            dropModel: function(model) {
+                // TODO: stub
+                return;
+            },
+
+            // Creates a handle to a texture.
+            createTexture: function(
+                urlPtr,
+                urlLen,
+            ) {
+                // TODO: stub
+                return 0;
+            },
+
+            // Frees a previously created handle to a texture.
+            dropTexture: function(texture) {
+                // TODO: stub
+                return 0;
+            }
+        }
+    };
+
+    console.info("Loading Metro WASM...");
+
+    /** @type {WebAssembly.Instance} */
+    const metro = (await WebAssembly.instantiateStreaming(
+        fetch("metro-game.wasm")
+    )).instance;
+
+    wasmContext.metro = metro;
+
+</script>
+
+</html>

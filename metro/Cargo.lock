@@ -68,13 +68,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "example"
-version = "0.1.0"
-dependencies = [
- "metro",
-]
-
-[[package]]
 name = "fdeflate"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -131,7 +124,6 @@ dependencies = [
  "image",
  "log",
  "rusttype",
- "sdl3-sys",
  "smallvec",
 ]
 
@@ -186,12 +178,6 @@ dependencies = [
  "libm",
  "owned_ttf_parser",
 ]
-
-[[package]]
-name = "sdl3-sys"
-version = "0.5.1+SDL3-3.2.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9be4ae099823870a9c9de3f72ec181d602d8d0550c8f5b2dfdfa9bbaa8ddccd2"
 
 [[package]]
 name = "simd-adler32"

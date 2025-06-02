@@ -1,0 +1,18 @@
+[package]
+name = "metro"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# logging facade
+log = "0.4.27"
+
+# stack-allocated vector
+smallvec = { version = "1.15.0" }
+
+dlmalloc = { version = "0.2.8", features = ["global"] }
+
+# font rendering
+rusttype = { version = "0.9.3", default-features = false, features = ["libm-math"] }
+
+image = { version = "0.25.6", default-features = false, features = ["png"] }
