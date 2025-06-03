@@ -1,13 +1,15 @@
 //! Client implementation of the Metro Engine for WASM.
 //! This code has all been written by-hand, with love.
 
-use alloc::boxed::Box;
+use alloc::{boxed::Box, rc::Rc};
 
 mod wasm {
 	#[link(wasm_import_module = "metroSys")]
 	unsafe extern "C" {
+		/// The time (in milliseconds) since program start.
 		#[link_name = "getTime"]
 		pub unsafe fn sys_get_time() -> f64;
+
 		/// Creates a handle to model data.
 		#[link_name = "createModel"]
 		pub unsafe fn sys_create_model(
@@ -38,9 +40,32 @@ mod wasm {
 			url_len: u32,
 		) -> u32; // Option<NonZeroU32>
 
-		// Frees a previously created handle to a texture.
+		/// Frees a previously created handle to a texture.
 		#[link_name = "dropTexture"]
 		pub unsafe fn sys_drop_texture(texture: u32) -> u32; // bool
+
+		/// Creates a handle to a shader.
+		#[link_name = "createShader"]
+		pub unsafe fn sys_create_shader(
+			shader_stage: u32,
+			source_ptr: u32,
+			source_len: u32
+		) -> u32; // Option<NonZeroU32>
+
+		/// Frees a previously created handle to a shader.
+		#[link_name = "dropShader"]
+		pub unsafe fn sys_drop_shader(shader: u32) -> u32; // bool
+
+		/// Creates a handle to a shader.
+		#[link_name = "createMaterial"]
+		pub unsafe fn sys_create_material(
+			frag: u32,
+			vert: u32
+		) -> u32; // Option<NonZeroU32>
+
+		/// Frees a previously created handle to a shader.
+		#[link_name = "dropMaterial"]
+		pub unsafe fn sys_drop_material(material: u32) -> u32; // bool
 	}
 }
 
@@ -54,7 +79,7 @@ impl ModelSys {
 		positions: &Box<[[f32; 2]]>,
 		coordinates: &Box<[[f32; 2]]>,
 		indices: &Box<[[u16; 3]]>,
-	) -> Self {
+	) -> Rc<Self> {
 		unsafe { 
 			let handle = wasm::sys_create_model(
 				positions.as_ptr() as u32,
@@ -67,10 +92,10 @@ impl ModelSys {
 			if handle == 0 {
 				panic!("Failed to create model in host-land, check the console for more info");
 			}
-			Self {
+			Rc::new(Self {
 				handle,
 				is_fresh: true,
-			}
+			})
 		}
 	}
 }
@@ -83,10 +108,27 @@ impl Drop for ModelSys {
 	}
 }
 
-#[repr(transparent)]
-pub struct MeshSys(u32);
+pub struct MeshSys {
+	handle: u32,
+	is_fresh: bool,
+}
 
-#[repr(transparent)]
+impl MeshSys {
+	pub fn create_mesh(
+		model: Rc<ModelSys>,
+		material: Rc<MaterialSys>,
+	) -> Rc<Self> {
+	}
+}
+
+impl Drop for MeshSys {
+	fn drop(&mut self) {
+		if self.is_fresh {
+			unsafe { wasm::sys_drop_model(self.handle); }
+		}
+	}
+}
+
 pub struct LightSys(u32);
 
 pub struct TextureSys {

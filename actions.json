@@ -1,0 +1,14 @@
+{
+    "movement":{
+        "type": "v2",
+        "keyboard": {
+            "w": "hold+y",
+            "a": "hold-x",
+            "s": "hold-y",
+            "d": "hold+x"
+        },
+        "gamepad": {
+            "ls": true
+        }
+    }
+}
