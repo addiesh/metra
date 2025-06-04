@@ -1,3 +1,5 @@
+<img src="metro-icon.svg" width="128px"/>
+
 # The Metro Game Engine
 
 Metro is a framework/game engine for making 2D games for the web using Rust.
@@ -20,9 +22,24 @@ A post-processing pass in Metro looks something like this:
 
 ## Real-time 2D lighting
 
-If a mesh
+## Asset loading
 
-## High-Level input management
+Most assets will be preloaded for you.
+On-demand loading of assets is a future feature.
+
+## Audio processing
+
+Current plan is for two modes:
+- stateful (music, ambience)
+- instant (play-and-forget effects)
+
+Allow for pausing
+
+## Persistent data
+
+Basic local storage.
+
+## High-Level game input
 
 Action Spec.
 
@@ -66,3 +83,15 @@ Action Spec.
 	}
 }
 ```
+
+# Future + Ideas
+
+- Persistent data; base64, JSON, other? maybe compress?
+- Worker; do we put WASM on a different thread?
+- Static preparation
+	- HTML file (game name/icon)
+	- Rust/JS imports (action bindings, asset loading)
+- Shaders; do we only allow fragment shaders (tragic) or do we implement two different lighting algorithms at once?
+- Loading
+	- a "loaded" flag
+	- a load event (event queue; load multiple assets at once in order to streamline?)

@@ -1,20 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link rel="icon" sizes="512x512" href="metro-icon.png">
 	<link rel="apple-touch-icon" sizes="512x512" href="metro-icon.png">
+	<link rel="preload" href="metro.mjs" as="script" type="text/javascript">
 	<title>{GAME}</title>
 	<style>
-		html, body {
+		html,
+		body {
 			display: block;
 			position: fixed;
 			margin: 0;
 			padding: 0;
 			width: 100%;
 			height: 100%;
-			background-color: transparent;
+			background-color: #fff;
 		}
 
 		canvas#metro {
@@ -29,155 +32,22 @@
 </head>
 
 <body>
+	<!--
+		Metro HTML
+		Made with Love (care) and Hate (web development)
+		© addie.sh 2025
+	-->
 	<canvas id="metro">
 		<h1>The Metro Engine requires JavaScript and WebGL 2</h1>
 		<p>Please enable these features if disabled (or upgrade to a browser that supports them, if applicable)</p>
-		<img alt="the Metro logo" src="metro-icon.png" width="256">
+		<img alt="the Metro logo" src="metro-icon.png" width="256" height="256">
 	</canvas>
+	<!-- <div id="start-wrapper">
+		<img alt="the Metro logo" src="metro-icon.png" width="256" height="256">
+		<button id="start">click to start</button>
+	</div> -->
 </body>
 
-<script type="module">
-	/** @type {HTMLCanvasElement} */
-	const canvas = document.getElementById('metro');
-	/** @type {WebGL2RenderingContext} */
-	const gl = canvas.getContext('webgl2');
-
-	console.info("Loading Metro WASM...");
-
-	/** @type {WebAssembly.Instance} */
-	const metro = (await WebAssembly.instantiateStreaming(
-		fetch("metro-game.wasm")
-	)).instance;
-	console.info("Done!");
-
-	const importObject = {
-		metroSys: {
-			/**
-			 * @return {number} The time (in milliseconds) since program start.
-			 */
-			getTime: function() {
-				// TODO: stub...?
-				return performance.now();
-			},
-			
-			/**
-			 * Creates a handle to model data.
-			 * @param {number} positionsPtr
-			 * @param {number} positionsLen
-			 * @param {number} coordinatesPtr
-			 * @param {number} coordinatesLen
-			 * @param {number} indicesPtr
-			 * @param {number} indicesLen
-			 * @return {number} A valid u32 handle, or 0 on error.
-			 */
-			createModel: function(
-				positionsPtr,
-				positionsLen,
-				coordinatesPtr,
-				coordinatesLen,
-				indicesPtr,
-				indicesLen,
-			) {
-				// TODO: stub
-				return 0;
-			},
-
-			/**
-			 * Frees a previously created handle to model data.
-			 * @param {number} model
-			 * @return {boolean} True on success, false otherwise.
-			 */
-			dropModel: function(model) {
-				// TODO: stub
-				return false;
-			},
-
-			/**
-			 * Creates a handle to a texture.
-			 * @param {number} urlPtr
-			 * @param {number} urlLen
-			 * @return {number} A valid u32 handle, or 0 on error.
-			 */
-			createTexture: function(
-				urlPtr,
-				urlLen,
-			) {
-				// TODO: stub
-				return 0;
-			},
-
-			/**
-			 * Frees a previously created handle to a texture.
-			 * @param {number} texture
-			 * @return {boolean} True on success, false otherwise.
-			 */
-			dropTexture: function(texture) {
-				// TODO: stub
-				return false;
-			},
-		
-			/**
-			 * Creates a handle to a shader.
-			 * @param {number} shaderStage
-			 * @param {number} sourcePtr
-			 * @param {number} sourceLen
-			 * @return {number} A valid u32 handle, or 0 on error.
-			 */
-			createShader: function(
-				shaderStage,
-				sourcePtr,
-				sourceLen,
-			) {
-				// TODO: stub
-				return 0;
-			},
-
-			/**
-			 * Frees a previously created handle to a shader.
-			 * @param {number} shader
-			 * @return {boolean} True on success, false otherwise.
-			 */
-			dropShader: function(shader) {
-				// TODO: stub
-				return false;
-			},
-		}
-	};
-
-	let eventQueue = [];
-
-	{
-		/** @type {Map<string, bool>} */
-		let keyState = new Map();
-		canvas.addEventListener('keydown', ev => {
-			ev.key
-		});
-		canvas.addEventListener('keyup', ev => {
-			
-		});
-		// let gamepads = new 
-		window.addEventListener("gamepadconnected", e => {
-			console.log(`Gamepad connected at index ${e.gamepad.index}: ${e.gamepad.id}. ${e.gamepad.buttons.length} buttons, ${e.gamepad.axes.length} axes.`);
-		});
-		window.addEventListener("gamepaddisconnected", e => {
-			console.log(`Gamepad disconnected at index ${e.gamepad.index}: ${e.gamepad.id}.`);
-
-		});
-	}
-
-	let isRunning = true;
-
-	function main() {
-
-		gl.viewport
-
-
-		if (isRunning) {
-			requestAnimationFrame(main);
-		}
-	}
-
-	main();
-</script>
+<script type="module" src="metro.mjs" async></script>
 
 </html>

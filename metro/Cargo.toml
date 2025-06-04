@@ -10,9 +10,11 @@ log = "0.4.27"
 # stack-allocated vector
 smallvec = { version = "1.15.0" }
 
+# memory allocation
 dlmalloc = { version = "0.2.8", features = ["global"] }
 
 # font rendering
 rusttype = { version = "0.9.3", default-features = false, features = ["libm-math"] }
 
-image = { version = "0.25.6", default-features = false, features = ["png"] }
+## compression
+# flate2 = "1.1.1"

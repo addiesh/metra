@@ -3,75 +3,41 @@
 
 use alloc::{boxed::Box, rc::Rc};
 
+use crate::ShaderStage;
+
+#[unsafe(export_name = "metroVarBigEndian")]
+static mut METRO_HOST_BIG_ENDIAN: u32 = 0;
+
 mod wasm {
+	#[repr(u32)]
+	pub enum BufferType {
+		/// Buffer containing vertex attributes, such as vertex coordinates,
+		/// texture coordinate data, or vertex color data.
+		Array = 0,
+		/// Buffer used for element indices.
+		Element = 1,
+		/// Buffer used for storing uniform blocks.
+		Uniform = 2,
+	}
+
 	#[link(wasm_import_module = "metroSys")]
 	unsafe extern "C" {
 		/// The time (in milliseconds) since program start.
 		#[link_name = "getTime"]
 		pub unsafe fn sys_get_time() -> f64;
 
-		/// Creates a handle to model data.
-		#[link_name = "createModel"]
-		pub unsafe fn sys_create_model(
-			// *mut [[f32; 2]]
-			positions_ptr: u32,
-			// usize
-			positions_len: u32,
-			// *mut [[f32; 2]]
-			coordinates_ptr: u32,
-			// usize
-			coordinates_len: u32,
-			// *mut [[u16; 3]]
-			indices_ptr: u32,
-			// usize
-			indices_len: u32,
-		) -> u32; // Option<NonZeroU32>
-
-		// Frees a previously created handle to model data.
-		#[link_name = "dropModel"]
-		pub unsafe fn sys_drop_model(model: u32) -> u32; // bool
-
-		/// Creates a handle to a texture.
-		#[link_name = "createTexture"]
-		pub unsafe fn sys_create_texture(
-			// *mut str
-			url_ptr: u32,
-			// usize
-			url_len: u32,
-		) -> u32; // Option<NonZeroU32>
-
-		/// Frees a previously created handle to a texture.
-		#[link_name = "dropTexture"]
-		pub unsafe fn sys_drop_texture(texture: u32) -> u32; // bool
-
-		/// Creates a handle to a shader.
-		#[link_name = "createShader"]
-		pub unsafe fn sys_create_shader(
-			shader_stage: u32,
-			source_ptr: u32,
-			source_len: u32
-		) -> u32; // Option<NonZeroU32>
-
-		/// Frees a previously created handle to a shader.
-		#[link_name = "dropShader"]
-		pub unsafe fn sys_drop_shader(shader: u32) -> u32; // bool
-
-		/// Creates a handle to a shader.
-		#[link_name = "createMaterial"]
-		pub unsafe fn sys_create_material(
-			frag: u32,
-			vert: u32
-		) -> u32; // Option<NonZeroU32>
-
-		/// Frees a previously created handle to a shader.
-		#[link_name = "dropMaterial"]
-		pub unsafe fn sys_drop_material(material: u32) -> u32; // bool
+		#[link_name = "createBuffer"]
+		pub unsafe fn sys_create_buffer(
+			bufferType: BufferType,
+			dataPtr: u32,
+			dataLen: u32,
+		) -> u32;
 	}
 }
 
 pub struct ModelSys {
 	handle: u32,
-	is_fresh: bool,
+	
 }
 
 impl ModelSys {
@@ -80,52 +46,70 @@ impl ModelSys {
 		coordinates: &Box<[[f32; 2]]>,
 		indices: &Box<[[u16; 3]]>,
 	) -> Rc<Self> {
-		unsafe { 
-			let handle = wasm::sys_create_model(
-				positions.as_ptr() as u32,
-				(positions.len() * 2) as u32,
-				coordinates.as_ptr() as u32,
-				(coordinates.len() * 2) as u32,
-				indices.as_ptr() as u32,
-				(indices.len() * 3) as u32,
-			);
-			if handle == 0 {
-				panic!("Failed to create model in host-land, check the console for more info");
-			}
-			Rc::new(Self {
-				handle,
-				is_fresh: true,
-			})
-		}
+		todo!()
 	}
 }
 
 impl Drop for ModelSys {
 	fn drop(&mut self) {
-		if self.is_fresh {
-			unsafe { wasm::sys_drop_model(self.handle); }
-		}
+		todo!()
+	}
+}
+
+pub struct ShaderSys {
+	stage: ShaderStage,
+	handle: u32,
+}
+
+impl ShaderSys {
+	pub fn create_shader(stage: ShaderStage, source: &str) -> Rc<Self> {
+		todo!()
+	}
+}
+
+impl Drop for ShaderSys {
+	fn drop(&mut self) {
+		todo!()
+	}
+}
+
+pub struct MaterialSys {
+	handle: u32,
+}
+
+impl MaterialSys {
+	pub fn create_material(
+		vert: Rc<ShaderSys>,
+		frag: Rc<ShaderSys>,
+	) -> Rc<Self> {
+		todo!()
+	}
+}
+
+impl Drop for MaterialSys {
+	fn drop(&mut self) {
+		todo!()
 	}
 }
 
 pub struct MeshSys {
 	handle: u32,
-	is_fresh: bool,
+	model: Rc<ModelSys>,
+	material: Rc<MaterialSys>,
 }
 
 impl MeshSys {
 	pub fn create_mesh(
 		model: Rc<ModelSys>,
 		material: Rc<MaterialSys>,
-	) -> Rc<Self> {
+	) -> Self {
+		todo!()
 	}
 }
 
 impl Drop for MeshSys {
 	fn drop(&mut self) {
-		if self.is_fresh {
-			unsafe { wasm::sys_drop_model(self.handle); }
-		}
+		todo!()
 	}
 }
 
@@ -133,32 +117,20 @@ pub struct LightSys(u32);
 
 pub struct TextureSys {
 	handle: u32,
-	is_fresh: bool,
+	
 }
 
 impl TextureSys {
 	pub fn create_texture(url: &str) -> Self {
-		unsafe {
-			let handle = wasm::sys_create_texture(
-				url.as_ptr() as u32,
-				url.len() as u32,
-			);
-			Self {
-				handle,
-				is_fresh: true,
-			}
-		}
+		todo!()
 	}
 }
 
 impl Drop for TextureSys {
 	fn drop(&mut self) {
-		unsafe {
-			wasm::sys_drop_texture(self.handle);
-		}
+		todo!()
 	}
 }
-
 
 // WebGL system:
 // 1. represent the current state of rendering as a structure, on the client side.

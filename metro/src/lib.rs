@@ -10,7 +10,20 @@ use sys::ModelSys;
 
 mod arena;
 mod sys;
+pub mod prelude;
 
+#[macro_export]
+macro_rules! metro_main {
+	{ $init:expr, $update:expr } => {
+		#[unsafe(export_name = "metroMain")]
+		extern "C" fn _generated_metro_main() {
+			metro::run(
+				$init,
+				$update
+			)
+		}
+	};
+}
 
 // fn _font_render_example() {
 // 	let font_data = std::fs::read("FluxischElse-Bold.otf").unwrap();
@@ -89,7 +102,11 @@ impl Metro {
 	/// in milliseconds.
 	pub fn get_time(&self) -> u64 { todo!() }
 
-	pub fn new_mesh(&mut self, model: Asset<Model>, material: Asset<Material>) -> Mesh {
+	pub fn new_mesh(
+		&mut self,
+		model: Asset<Model>,
+		material: Asset<Material>
+	) -> Mesh {
 		Mesh {
 			internal: Rc::new(MeshInternal {
 				model,
@@ -98,11 +115,19 @@ impl Metro {
 		}
 	}
 
+	pub fn new_light(
+		&mut self,
+		source: LightSource,
+	) -> Light {
+		Light {
+			source
+		}
+	}
+
 	// pub fn get_action_state<T>(&self) -> { }
 	// pub fn did_just_action<T>(&self) -> bool {}
 	// pub fn load_asset(&self) -> Asset {}
 }
-
 
 /// The borrow checker is able to enforce most of the rules 
 /// regarding lifetimes in the engine, but the most problematic
@@ -132,7 +157,15 @@ pub struct Mesh {
 	internal: Rc<MeshInternal>,
 }
 
-pub struct Light {}
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum LightSource {
+	Point,
+	Ambient
+}
+
+pub struct Light {
+	source: LightSource,
+}
 
 pub struct Sound {}
 
@@ -141,20 +174,60 @@ pub struct Texture {
 	height: u32,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum ShaderStage {
+	Vertex = 0,
+	Fragment = 1,
+}
+
+pub struct Shader {}
+
 pub struct Material {}
 
 pub struct Effect { }
 
-pub fn run<T>(
-	init: fn(&mut Metro) -> T,
-	update: fn(state: &mut T, metro: &mut Metro) -> bool
+#[derive(Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum MetroStatus {
+	/// Stops execution whenever possible and releases resources.
+	Stop = 0,
+	/// Continues execution as normal.
+	Continue = 1,
+	// /// Continues execution, but with a higher tolerance for delays.
+	// Yield = 2,
+}
+
+// can you tell we're committing crimes against Rust?
+#[allow(static_mut_refs)]
+pub fn run<T: 'static>(
+	init: fn(metro: &mut Metro) -> T,
+	update: fn(state: &mut T, metro: &mut Metro) -> MetroStatus
 ) {
-	fn tick<T>(
-		game_state: &mut T,
-		metro: &mut Metro,
-		update: fn(state: &mut T, metro: &mut Metro) -> bool
-	) {
-		update(game_state, metro);
+	static mut HAS_SETUP: bool  = false;
+	// possibly replace with a cell in the future?
+	static mut UPDATE_FN: Option<Box<dyn FnMut() -> MetroStatus>> = None;
+	
+	#[unsafe(export_name = "metroUpdate")]
+	extern "C" fn _update() -> MetroStatus {
+		unsafe {
+			(UPDATE_FN.as_mut().unwrap())()
+		}
+	}
+
+	#[unsafe(export_name = "metroClean")]
+	extern "C" fn _clean() -> () {
+		unsafe {
+			drop(UPDATE_FN.take().unwrap());
+		}
+	}
+	
+	unsafe {
+		if HAS_SETUP {
+			panic!("run is not allowed to be called multiple times");
+		} else {
+			HAS_SETUP = true;
+		}
 	}
 
 	// 1. initialize the engine state
@@ -164,16 +237,19 @@ pub fn run<T>(
 	// 5. loop game frames until closing
 	// 6. hide the game window and free resources
 
+	// let mut metro = Rc::new(Metro::new());
 	let mut metro = Metro::new();
 
 	// TODO: initialize the engine state
 
 	let mut game_state = init(&mut metro);
-
-	tick(&mut game_state, &mut metro, update);
+	
 	// show window
 
-	while metro.is_running() {
-		tick(&mut game_state, &mut metro, update);
+	unsafe {
+		UPDATE_FN = Some(Box::new(move || {
+			update(&mut game_state, &mut metro)
+		}));
 	}
+
 }

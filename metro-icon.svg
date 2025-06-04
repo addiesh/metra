@@ -19,24 +19,25 @@
    xmlns:svg="http://www.w3.org/2000/svg">
   <sodipodi:namedview
      id="namedview1"
-     pagecolor="#ffffff"
+     pagecolor="#d8d8d8"
      bordercolor="#111111"
      borderopacity="1"
      inkscape:showpageshadow="0"
      inkscape:pageopacity="0"
-     inkscape:pagecheckerboard="1"
+     inkscape:pagecheckerboard="true"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="px"
-     inkscape:zoom="11.313709"
-     inkscape:cx="10.120465"
-     inkscape:cy="14.849242"
+     inkscape:zoom="16"
+     inkscape:cx="20.875"
+     inkscape:cy="16.875"
      inkscape:window-width="1366"
      inkscape:window-height="699"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:current-layer="layer1"
-     showgrid="false">
+     showgrid="false"
+     inkscape:export-bgcolor="#00000000">
     <inkscape:grid
        id="grid1"
        units="px"
@@ -51,6 +52,14 @@
        empspacing="8"
        enabled="true"
        visible="false" />
+    <inkscape:page
+       x="0"
+       y="0"
+       width="32"
+       height="32"
+       id="page1"
+       margin="0"
+       bleed="0" />
   </sodipodi:namedview>
   <defs
      id="defs1">
@@ -219,7 +228,7 @@
        gradientTransform="matrix(1.1700838,2.8094085e-8,-1.0969536e-8,1.1700837,-1.7858797,1.923588)"
        gradientUnits="userSpaceOnUse" />
     <filter
-       style="color-interpolation-filters:sRGB;"
+       style="color-interpolation-filters:sRGB"
        inkscape:label="Noise Fill"
        id="filter33"
        x="0"
@@ -265,111 +274,121 @@
          id="feComposite33" />
     </filter>
     <filter
-       style="color-interpolation-filters:sRGB;"
-       inkscape:label="Drop Shadow"
-       id="filter14"
-       x="-0.090709882"
-       y="-0.12083607"
-       width="1.1716733"
-       height="1.2415937">
-      <feFlood
-         result="flood"
-         in="SourceGraphic"
-         flood-opacity="0.498039"
-         flood-color="rgb(12,21,33)"
-         id="feFlood13" />
-      <feGaussianBlur
-         result="blur"
-         in="SourceGraphic"
-         stdDeviation="0.500000"
-         id="feGaussianBlur13" />
-      <feOffset
-         result="offset"
-         in="blur"
-         dx="0.000000"
-         dy="0.000000"
-         id="feOffset13" />
+       style="color-interpolation-filters:sRGB"
+       inkscape:label="Noise Fill"
+       id="filter33-8"
+       x="0"
+       y="0"
+       width="1"
+       height="1">
+      <feTurbulence
+         type="fractalNoise"
+         baseFrequency="20 40"
+         numOctaves="5"
+         seed="1"
+         result="turbulence"
+         id="feTurbulence32-4" />
       <feComposite
-         result="comp1"
+         in="SourceGraphic"
+         in2="turbulence"
          operator="in"
-         in="flood"
-         in2="offset"
-         id="feComposite13" />
+         result="composite1"
+         id="feComposite32-8" />
+      <feColorMatrix
+         values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 3 -1 "
+         result="color"
+         id="feColorMatrix32-1" />
+      <feFlood
+         flood-opacity="1"
+         flood-color="rgb(21,40,57)"
+         result="flood"
+         id="feFlood32-0" />
+      <feMerge
+         result="merge"
+         id="feMerge33-3">
+        <feMergeNode
+           in="flood"
+           id="feMergeNode32-0" />
+        <feMergeNode
+           in="color"
+           id="feMergeNode33-4" />
+      </feMerge>
       <feComposite
-         result="comp2"
-         operator="over"
-         in="SourceGraphic"
-         in2="comp1"
-         id="feComposite14" />
+         in2="SourceGraphic"
+         operator="in"
+         result="composite2"
+         id="feComposite33-4" />
     </filter>
   </defs>
   <g
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1">
-    <rect
-       style="display:none;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.01;stroke-linecap:square;stroke-linejoin:round;stroke-opacity:1;paint-order:stroke fill markers"
-       id="rect33"
-       width="32"
-       height="32"
-       x="0.5"
-       y="-1"
-       transform="translate(-0.5,1)" />
     <g
        id="g9"
        transform="translate(-0.5,1)"
-       style="filter:url(#filter14)">
+       style="display:inline"
+       inkscape:label="metro">
       <path
-         style="font-style:italic;font-weight:bold;font-size:32px;font-family:'Inter Display';-inkscape-font-specification:'Inter Display Bold';fill:url(#linearGradient2);fill-opacity:1;stroke:url(#linearGradient12);stroke-width:2;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+         style="font-style:italic;font-weight:bold;font-size:32px;font-family:'Inter Display';-inkscape-font-specification:'Inter Display Bold';display:inline;fill:url(#linearGradient2);fill-opacity:1;stroke:url(#linearGradient12);stroke-width:2;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
          d="M 3,24 6.5,10 25,6 c 5,-1.0810811 6,2 5,6 l -3,12 h -4 l 2,-8 c 1,-4 -3,-4 -4,0 l -2,8 h -4 l 2,-8 c 1,-4 -3,-4 -4,0 l -2,8 z"
          id="text1-1"
          aria-label="m"
          sodipodi:nodetypes="ccsccccccccccc"
-         clip-path="none" />
+         clip-path="none"
+         inkscape:label="metal and stroke" />
       <path
-         style="font-style:italic;font-weight:bold;font-size:32px;font-family:'Inter Display';-inkscape-font-specification:'Inter Display Bold';display:inline;opacity:0.12;mix-blend-mode:multiply;fill:#ffffff;fill-opacity:0.6419934;stroke:none;stroke-width:2;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers;filter:url(#filter33)"
+         style="font-style:italic;font-weight:bold;font-size:32px;font-family:'Inter Display';-inkscape-font-specification:'Inter Display Bold';display:inline;opacity:0.12;mix-blend-mode:multiply;fill:#ffffff;fill-opacity:0.641993;stroke:none;stroke-width:2;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers;filter:url(#filter33)"
          d="M 3,24 6.5,10 25,6 c 5,-1.0810811 6,2 5,6 l -3,12 h -4 l 2,-8 c 1,-4 -3,-4 -4,0 l -2,8 h -4 l 2,-8 c 1,-4 -3,-4 -4,0 l -2,8 z"
          id="path26"
          aria-label="m"
          sodipodi:nodetypes="ccsccccccccccc"
-         clip-path="none" />
+         clip-path="none"
+         inkscape:label="texture" />
       <path
-         style="font-style:italic;font-weight:bold;font-size:32px;font-family:'Inter Display';-inkscape-font-specification:'Inter Display Bold';display:inline;fill:url(#radialGradient21);stroke:none;stroke-width:2;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers;opacity:1"
+         style="font-style:italic;font-weight:bold;font-size:32px;font-family:'Inter Display';-inkscape-font-specification:'Inter Display Bold';display:inline;opacity:1;fill:url(#radialGradient21);stroke:none;stroke-width:2;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
          d="M 3,24 6.5,10 25,6 c 5,-1.0810811 6,2 5,6 l -3,12 h -4 l 2,-8 c 1,-4 -3,-4 -4,0 l -2,8 h -4 l 2,-8 c 1,-4 -3,-4 -4,0 l -2,8 z"
          id="path21"
          aria-label="m"
          sodipodi:nodetypes="ccsccccccccccc"
-         clip-path="none" />
+         clip-path="none"
+         inkscape:label="additional lighting" />
       <path
          style="fill:url(#linearGradient20);fill-opacity:1;stroke:none;stroke-width:2;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
          d="m 4,18 0.5,-1 h 9 L 13,18 Z"
          id="path7"
-         sodipodi:nodetypes="ccccc" />
+         sodipodi:nodetypes="ccccc"
+         inkscape:label="left bar" />
       <path
          style="fill:url(#linearGradient18);fill-opacity:1;stroke:none;stroke-width:2;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
          d="m 16,18 0.5,-1 h 5 L 21,18 Z"
          id="path8"
-         sodipodi:nodetypes="ccccc" />
+         sodipodi:nodetypes="ccccc"
+         inkscape:label="middle bar" />
       <path
          style="fill:url(#linearGradient15);stroke:none;stroke-width:2;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
          d="m 24,18 0.5,-1 h 5 L 29,18 Z"
          id="path9"
-         sodipodi:nodetypes="ccccc" />
+         sodipodi:nodetypes="ccccc"
+         inkscape:label="right bar" />
       <path
-         style="fill:url(#linearGradient4);fill-opacity:1;stroke-width:0.01;stroke:#ff5555;stroke-opacity:1;paint-order:stroke fill markers;stroke-dasharray:none"
+         style="fill:url(#linearGradient4);fill-opacity:1;stroke:#ff5555;stroke-width:0.01;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
          d="m 3,24 1.5,-6 h 8 L 11,24 Z"
          id="path6"
-         sodipodi:nodetypes="ccccc" />
+         sodipodi:nodetypes="ccccc"
+         inkscape:label="left red" />
       <path
-         style="fill:url(#linearGradient6);fill-opacity:1;stroke-width:0.01;stroke:#ffd533;stroke-opacity:1;stroke-dasharray:none;paint-order:stroke fill markers"
+         style="fill:url(#linearGradient6);fill-opacity:1;stroke:#ffd533;stroke-width:0.01;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
          d="m 15,24 h 4 l 1.5,-6 h -4 z"
          id="path5"
-         sodipodi:nodetypes="ccccc" />
+         sodipodi:nodetypes="ccccc"
+         inkscape:label="middle yellow" />
       <path
-         style="fill:url(#linearGradient8);fill-opacity:1;stroke-width:0.01;stroke:#55ff55;stroke-opacity:1;stroke-dasharray:none;paint-order:stroke fill markers"
+         style="fill:url(#linearGradient8);fill-opacity:1;stroke:#55ff55;stroke-width:0.01;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
          d="m 24.5,18 h 4 L 27,24 h -4 z"
          id="path4"
-         sodipodi:nodetypes="ccccc" />
+         sodipodi:nodetypes="ccccc"
+         inkscape:label="right green" />
     </g>
   </g>
 </svg>
