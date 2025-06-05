@@ -1,21 +1,15 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
-struct KeyboardConfig {
-    
-}
+struct KeyboardConfig {}
 
 #[derive(Serialize, Deserialize)]
-struct GamepadConfig {
-
-}
+struct GamepadConfig {}
 
 #[derive(Serialize, Deserialize)]
 struct ActionConfig {
-    keyboard: KeyboardConfig,
-    gamepad: GamepadConfig,
+	keyboard: KeyboardConfig,
+	gamepad: GamepadConfig,
 }
 
-fn main() {
-
-}
+fn main() {}

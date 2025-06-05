@@ -16,5 +16,8 @@ dlmalloc = { version = "0.2.8", features = ["global"] }
 # font rendering
 rusttype = { version = "0.9.3", default-features = false, features = ["libm-math"] }
 
+# serialization
+base64 = { version = "0.22.1", default-features = false, features = ["alloc"] }
+
 ## compression
 # flate2 = "1.1.1"
