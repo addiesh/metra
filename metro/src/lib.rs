@@ -1,5 +1,9 @@
 #![no_std]
+
 extern crate alloc;
+
+#[cfg(not(target_arch = "wasm32"))]
+compile_error!("Metro must target WASM32");
 
 #[global_allocator]
 static DLMALLOC: dlmalloc::GlobalDlmalloc = dlmalloc::GlobalDlmalloc;
@@ -9,6 +13,7 @@ use core::ops::{Deref, DerefMut};
 use alloc::boxed::Box;
 use alloc::rc::Rc;
 use alloc::vec::Vec;
+use log::debug;
 
 mod arena;
 pub mod prelude;
@@ -133,6 +138,12 @@ impl Metro {
 	// pub fn get_action_state<T>(&self) -> { }
 	// pub fn did_just_action<T>(&self) -> bool {}
 	// pub fn load_asset(&self) -> Asset {}
+}
+
+impl Drop for Metro {
+	fn drop(&mut self) {
+		debug!("engine state dropped");
+	}
 }
 
 /// The borrow checker is able to enforce most of the rules
@@ -261,6 +272,7 @@ pub fn run<T: 'static>(
 	#[unsafe(export_name = "metroClean")]
 	extern "C" fn _clean() -> () {
 		unsafe {
+			debug!("dropping closure");
 			drop(UPDATE_FN.take().unwrap());
 		}
 	}

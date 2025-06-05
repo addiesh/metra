@@ -3,10 +3,17 @@
 
 extern crate alloc;
 
+use alloc::string::{String, ToString};
 use log::{debug, error, info, trace, warn};
 use metro::prelude::*;
 
 struct GameState;
+
+impl Drop for GameState {
+	fn drop(&mut self) {
+		debug!("game state dropped");
+	}
+}
 
 fn init(engine: &mut Metro) -> GameState {
 	trace!("hello from init!");
@@ -15,17 +22,29 @@ fn init(engine: &mut Metro) -> GameState {
 	info!("hello from init!");
 	debug!("hello from init!");
 
-	info!("random value: {}", engine.random());
-	if !engine.save_persistent("skibidi".as_bytes()) {
+	info!(
+		"current persistent data: {:?}",
+		engine
+			.load_persistent()
+			.map(|d| String::from_utf8(d.to_vec()).ok())
+			.flatten()
+	);
+	let random_string = engine.random().to_string();
+	info!("random value: {random_string}");
+	if !engine.save_persistent(random_string.as_bytes()) {
 		error!("failed to save persistent data :(")
 	}
-	assert_eq!(*engine.load_persistent().unwrap(), *"skibidi".as_bytes());
+	assert_eq!(
+		*engine.load_persistent().unwrap(),
+		*random_string.as_bytes()
+	);
+	info!("Passed save/load check!");
 	GameState
 }
 
 fn update(_state: &mut GameState, _engine: &mut Metro) -> MetroStatus {
 	// info!("update");
-	MetroStatus::Continue
+	MetroStatus::Stop
 }
 
 metro_main! {

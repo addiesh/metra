@@ -1,12 +1,12 @@
 //! Client implementation of the Metro Engine for WASM.
 //! This code has all been written by-hand, with love.
 
-use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::ToString;
+use alloc::{borrow::ToOwned, string::String};
 use base64::Engine;
-use log::{Log, error};
+use log::{Log, debug, error, trace};
 
 #[unsafe(export_name = "metroVarBigEndian")]
 static mut METRO_HOST_BIG_ENDIAN: u32 = 0;

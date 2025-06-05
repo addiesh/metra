@@ -27,6 +27,7 @@ const gl = canvas.getContext('webgl2');
  * @prop {WebAssembly.Global} exports.metroVarBigEndian
  * @prop {() => 0|1} exports.metroUpdate
  * @prop {() => void} exports.metroMain
+ * @prop {() => void} exports.metroClean
  * 
 */
 
@@ -38,7 +39,7 @@ const context = {
 	metro: null,
 };
 
-/** @type {?ArrayBuffer} */
+/** @type {?Uint8Array} */
 let cachedSaveBuffer = null;
 /** @type {?string} */
 let cachedSaveString = null;
@@ -78,7 +79,7 @@ const importObject = {
 				context.metro.exports.memory.buffer.slice(contentPtr, contentPtr + contentLen),
 			).replaceAll('%', '%%') : "");
 			let string = `%c[${levelStringMap[level - 1]} ${location}]%c ${content}`;
-			console[levelFnMap[level  - 1]](
+			console[levelFnMap[level - 1]](
 				string,
 				"font-weight:800;color:color-mix(currentcolor,transparent)",
 				""
@@ -105,9 +106,9 @@ const importObject = {
 				try {
 					cachedSaveString = localStorage.getItem('metroPersistent');
 					if (cachedSaveString == null) {
-						cachedSaveBuffer = new ArrayBuffer();
+						cachedSaveBuffer = new Uint8Array();
 					} else {
-						cachedSaveBuffer = textEncoder.encode(cachedSaveString).buffer;
+						cachedSaveBuffer = textEncoder.encode(cachedSaveString);
 					}
 				} catch (err) {
 					console.error("Error reading from persistent data:", err);
@@ -120,7 +121,7 @@ const importObject = {
 			} else {
 				// this branch should never be called if len == 0, as enforced by caller
 				let view = new Uint8Array(context.metro.exports.memory.buffer, dataPtr, dataLen);
-				view.copyWithin(cachedSaveBuffer);
+				view.set(cachedSaveBuffer, 0);
 				return 0;
 			}
 		},
@@ -179,18 +180,18 @@ const importObject = {
 
 {
 	// https://bsky.app/profile/addie.sh/post/3lqq6ixhjp22q
-	let u32 = new Uint32Array([0xDEADBEEF]);
-	let u8 = new Uint8Array(u32.buffer);
+	let u16 = new Uint16Array([0xACAB]);
+	let u8 = new Uint8Array(u16.buffer);
 	let addr = context.metro.exports.metroVarBigEndian.value;
 	let view = new DataView(context.metro.exports.memory.buffer, addr, 4);
 
 	switch (u8[0]) {
-		case 0xDE: {
+		case 0xAC: {
 			console.info("running on big-endian system, enabling tranpose flag");
 			view.setUint32(0, 1, true);
 			break;
 		}
-		case 0xEF: {
+		case 0xAB: {
 			console.info("running on little-endian system, no corrections required");
 			view.setUint32(0, 0, true);
 			break;
@@ -248,11 +249,13 @@ function main() {
 	gl.clear(gl.COLOR_BUFFER_BIT /* | gl.DEPTH_BUFFER_BIT */);
 	// gl.enable(gl.DEPTH_TEST);
 	// gl.enable(gl.CULL_FACE);
-	
+
 	gl.flush();
 
 	if (isRunning) {
 		requestAnimationFrame(main);
+	} else {
+		context.metro.exports.metroClean();
 	}
 }
 
