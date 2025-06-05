@@ -5,20 +5,29 @@ extern crate alloc;
 #[cfg(not(target_arch = "wasm32"))]
 compile_error!("Metro must target WASM32");
 
+// lol, lmao.
+// #![forbid(unsafe_code)]
+
 #[global_allocator]
 static DLMALLOC: dlmalloc::GlobalDlmalloc = dlmalloc::GlobalDlmalloc;
 
-use core::ops::{Deref, DerefMut};
+use core::ops::Deref;
 
-use alloc::boxed::Box;
-use alloc::rc::Rc;
+use alloc::string::String;
 use alloc::vec::Vec;
-use log::debug;
+use alloc::{borrow::ToOwned, boxed::Box};
+use base64::Engine;
+use core::num::NonZeroU32;
+use log::{debug, error};
+
+use crate::{asset::Asset, prelude::Resource, resource::ResourceTarget};
 
 mod arena;
+pub mod asset;
+mod logger;
 pub mod prelude;
+pub mod resource;
 mod sys;
-
 // fn _font_render_example() {
 // 	let font_data = std::fs::read("FluxischElse-Bold.otf").unwrap();
 //
@@ -79,23 +88,48 @@ mod sys;
 pub struct Metro {
 	meshes: Vec<ResourceTarget<Mesh>>,
 	lights: Vec<ResourceTarget<Light>>,
+	shaders: Vec<ResourceTarget<Shader>>,
 	effects: Vec<ResourceTarget<Effect>>,
+
+	unit_quad: Asset<Model>,
+	// TODO: shader pretty explicitly means "fragment shader" here.
+	//		 This is a blatant misuse of API.
+	universal_vertex: Asset<Shader>,
+	default_fragment: Asset<Shader>,
 	// standard_vertex:
 	// model_cache
 }
 
-static UNIT_QUAD: ([f32; 8], [f32; 8], [u16; 6]) = (
-	[-1., -1., 1.0, -1., 1.0, 1.0, -1., 1.0],
-	[0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0],
-	[0, 1, 2, 2, 3, 0],
+static UNIT_QUAD: ([[f32; 2]; 4], [[f32; 2]; 4], [[u16; 3]; 2]) = (
+	[[-1., -1.], [1.0, -1.], [1.0, 1.0], [-1., 1.0]],
+	[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
+	[[0, 1, 2], [2, 3, 0]],
 );
+
+static UNIVERSAL_VERTEX_SHADER: &str = include_str!("universal_vertex.glsl");
+static DEFAULT_FRAGMENT_SHADER: &str = include_str!("default_fragment.glsl");
 
 impl Metro {
 	fn new() -> Self {
+		let meshes = Vec::with_capacity(128);
+		let lights = Vec::with_capacity(32);
+		let shaders = Vec::with_capacity(16);
+		let effects = Vec::with_capacity(4);
+
+		let unit_quad = Asset::new(Model::new(&UNIT_QUAD.0, &UNIT_QUAD.1, &UNIT_QUAD.2));
+
+		let universal_vertex = Asset::new(Shader::new(UNIVERSAL_VERTEX_SHADER, true));
+
+		let default_fragment = Asset::new(Shader::new(DEFAULT_FRAGMENT_SHADER, false));
+
 		Self {
-			meshes: Vec::with_capacity(128),
-			lights: Vec::with_capacity(32),
-			effects: Vec::with_capacity(4),
+			meshes,
+			lights,
+			shaders,
+			effects,
+			unit_quad,
+			universal_vertex,
+			default_fragment,
 		}
 	}
 
@@ -106,16 +140,28 @@ impl Metro {
 		unsafe { sys::sys_get_time() }
 	}
 
-	/// Returns a psuedo-random number from 0 to 1.
+	/// Returns a pseudo-random number from 0 to 1.
 	#[must_use]
 	#[inline]
 	pub fn random(&self) -> f64 {
 		unsafe { sys::sys_get_random() }
 	}
 
+	pub fn get_unit_quad(&self) -> Asset<Model> {
+		self.unit_quad.clone()
+	}
+
+	pub fn new_unit_mesh(&mut self) -> Resource<Mesh> {
+		self.new_mesh(self.unit_quad.clone(), self.default_fragment.clone())
+	}
+
 	#[must_use]
-	pub fn new_mesh(&mut self, model: Asset<Model>, material: Asset<Material>) -> Resource<Mesh> {
-		Resource::new(Mesh { model, material })
+	pub fn new_mesh(&mut self, model: Asset<Model>, shader: Asset<Shader>) -> Resource<Mesh> {
+		Resource::new(Mesh::new(
+			model,
+			self.universal_vertex.clone(),
+			shader.clone(),
+		))
 	}
 
 	#[must_use]
@@ -123,16 +169,40 @@ impl Metro {
 		Light { source }
 	}
 
-	#[inline]
 	#[must_use]
 	pub fn save_persistent(&mut self, data: &[u8]) -> bool {
-		sys::save_persistent(data)
+		unsafe {
+			let decoded = base64::engine::general_purpose::STANDARD.encode(data);
+			let res = sys::save_persistent(decoded.as_ptr() as u32, decoded.len() as u32);
+			drop(decoded);
+			res
+		}
 	}
 
-	#[inline]
 	#[must_use]
 	pub fn load_persistent(&self) -> Option<Box<[u8]>> {
-		sys::load_persistent()
+		unsafe {
+			match sys::load_persistent(0, 0) {
+				u32::MAX => None,
+				0 => Some(Box::new([])),
+				size => {
+					let mut allocation = Box::new_uninit_slice(size as usize);
+					let res = sys::load_persistent(allocation.as_mut_ptr() as u32, size);
+					if res == u32::MAX {
+						panic!("Size of persistent data changed while performing load!");
+					}
+					let text = allocation.assume_init();
+					let decoded = base64::engine::general_purpose::STANDARD.decode(text);
+					match decoded {
+						Ok(v) => Some(v.into_boxed_slice()),
+						Err(err) => {
+							error!("DecodeError during persistent data load, {err}");
+							None
+						}
+					}
+				}
+			}
+		}
 	}
 
 	// pub fn get_action_state<T>(&self) -> { }
@@ -146,63 +216,103 @@ impl Drop for Metro {
 	}
 }
 
-/// The borrow checker is able to enforce most of the rules
-/// regarding lifetimes in the engine, but the most problematic
-/// exception is the smart pointer type.
-struct OwnershipFailsafe {}
-
-pub struct Resource<T> {
-	target: *mut ResourceTarget<T>,
-}
-
-// SAFETY: resource will always be alive while the handle itself is alive.
-impl<T> Deref for Resource<T> {
-	type Target = T;
-
-	fn deref<'a>(&'a self) -> &'a Self::Target {
-		unsafe { &self.target.as_ref::<'a>().unwrap_unchecked().data }
-	}
-}
-
-impl<T> DerefMut for Resource<T> {
-	fn deref_mut<'a>(&'a mut self) -> &'a mut Self::Target {
-		unsafe { &mut self.target.as_mut::<'a>().unwrap_unchecked().data }
-	}
-}
-
-struct ResourceTarget<T> {
-	in_use: bool,
-	data: T,
-}
-
-impl<T> Resource<T> {
-	fn new(data: T) -> Self {
-		Self {
-			target: Box::leak(Box::new(ResourceTarget { in_use: true, data })),
-		}
-	}
-}
-
-impl<T> Drop for Resource<T> {
-	fn drop(&mut self) {
-		unsafe { drop(Box::from_raw(self.target)) }
-	}
-}
-
-pub struct Asset<T> {
-	rc: Rc<T>,
-}
+pub struct Buffer {}
 
 pub struct Model {
 	positions: Box<[[f32; 2]]>,
 	coordinates: Box<[[f32; 2]]>,
 	indices: Box<[[u16; 3]]>,
-	from_static: bool,
+	// webGL specifics
+	position_handle: NonZeroU32,
+	coordinate_handle: NonZeroU32,
+	index_handle: NonZeroU32,
+	vao: NonZeroU32,
 }
+
+impl Model {
+	fn new(positions: &[[f32; 2]], coordinates: &[[f32; 2]], indices: &[[u16; 3]]) -> Self {
+		unsafe {
+			// let is_big_endian = sys::METRO_HOST_BIG_ENDIAN == 1;
+			let vao = sys::create_vertex_array().expect("failed to create VAO");
+			let positions: Box<[[f32; 2]]> = positions.into_iter().map(|e| *e).collect();
+			let coordinates: Box<[[f32; 2]]> = coordinates.into_iter().map(|e| *e).collect();
+			let indices: Box<[[u16; 3]]> = indices.into_iter().map(|e| *e).collect();
+			let position_handle = sys::create_buffer(
+				sys::BufferType::Array,
+				positions.as_ptr() as u32,
+				size_of_val(positions.deref()) as u32,
+			)
+			.expect("failed to create position buffer (RESOURCE LEAK)");
+			let coordinate_handle = sys::create_buffer(
+				sys::BufferType::Array,
+				coordinates.as_ptr() as u32,
+				size_of_val(coordinates.deref()) as u32,
+			)
+			.expect("failed to create coordinate buffer (RESOURCE LEAK)");
+			let index_handle = sys::create_buffer(
+				sys::BufferType::Element,
+				indices.as_ptr() as u32,
+				size_of_val(indices.deref()) as u32,
+			)
+			.expect("failed to create index buffer (RESOURCE LEAK)");
+			// todo!()
+			Self {
+				positions,
+				coordinates,
+				indices,
+				position_handle,
+				coordinate_handle,
+				index_handle,
+				vao,
+			}
+		}
+	}
+}
+
+impl Drop for Model {
+	fn drop(&mut self) {
+		unsafe {
+			if !sys::drop_buffer(self.position_handle) {
+				error!("Failed to drop position buffer!")
+			}
+			if !sys::drop_buffer(self.coordinate_handle) {
+				error!("Failed to drop coordinate buffer!")
+			}
+			if !sys::drop_buffer(self.index_handle) {
+				error!("Failed to drop index buffer!")
+			}
+		}
+	}
+}
+
 pub struct Mesh {
 	model: Asset<Model>,
-	material: Asset<Material>,
+	shader: Asset<Shader>,
+	program: NonZeroU32,
 }
+
+impl Mesh {
+	fn new(model: Asset<Model>, vertex: Asset<Shader>, fragment: Asset<Shader>) -> Self {
+		let program = unsafe {
+			sys::create_program(vertex.shader, fragment.shader)
+				.expect("Failed to create mesh shader program!")
+		};
+		Self {
+			model,
+			shader: fragment,
+			program,
+		}
+	}
+}
+
+impl Drop for Mesh {
+	fn drop(&mut self) {
+		if unsafe { !sys::drop_program(self.program) } {
+			error!("Failed to drop mesh shader program!")
+		}
+	}
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum LightSource {
 	Point,
@@ -216,14 +326,37 @@ pub struct Texture {
 	width: u32,
 	height: u32,
 }
-#[derive(Clone, Copy, PartialEq, Eq)]
-#[repr(u32)]
-pub enum ShaderStage {
-	Vertex = 0,
-	Fragment = 1,
+
+pub struct Shader {
+	source: String,
+	shader: NonZeroU32,
 }
-pub struct Shader {}
-pub struct Material {}
+
+impl Shader {
+	fn new(source: &str, is_vertex: bool) -> Self {
+		let source = source.to_owned();
+		let shader = unsafe {
+			sys::create_shader(
+				(!is_vertex) as u32,
+				source.as_ptr() as u32,
+				source.len() as u32,
+			)
+			.expect("Failed to compile shader!")
+		};
+		Self { source, shader }
+	}
+}
+
+impl Drop for Shader {
+	fn drop(&mut self) {
+		unsafe {
+			if !sys::drop_shader(self.shader) {
+				error!("Failed to drop shader!")
+			}
+		}
+	}
+}
+
 pub struct Effect {}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -242,7 +375,7 @@ pub enum MetroStatus {
 macro_rules! metro_main {
 	{ $init:expr, $update:expr } => {
 		#[unsafe(export_name = "metroMain")]
-		extern "C" fn __generated_metro_main() {
+		extern "C" fn __metro_main() {
 			::metro::run(
 				$init,
 				$update
@@ -265,12 +398,12 @@ pub fn run<T: 'static>(
 	static mut UPDATE_FN: Option<Box<dyn FnMut() -> MetroStatus>> = None;
 
 	#[unsafe(export_name = "metroUpdate")]
-	extern "C" fn _update() -> MetroStatus {
-		unsafe { (UPDATE_FN.as_mut().unwrap())() }
+	extern "C" fn metro_update() -> MetroStatus {
+		unsafe { UPDATE_FN.as_mut().unwrap()() }
 	}
 
 	#[unsafe(export_name = "metroClean")]
-	extern "C" fn _clean() -> () {
+	extern "C" fn metro_clean() -> () {
 		unsafe {
 			debug!("dropping closure");
 			drop(UPDATE_FN.take().unwrap());
@@ -285,24 +418,10 @@ pub fn run<T: 'static>(
 		}
 	}
 
-	sys::init();
+	logger::init();
 
-	// 1. initialize the engine state
-	// 2. initialize the game state, provide access to the engine handle to load assets
-	// 3. run 1 game frame detached from the remaining game loop
-	// 4. show the game window (if applicable)
-	// 5. loop game frames until closing
-	// 6. hide the game window and free resources
-
-	// let mut metro = Rc::new(Metro::new());
 	let mut engine = Metro::new();
-
-	// TODO: initialize the engine state
-
 	let mut game_state = init(&mut engine);
-
-	// show window
-
 	unsafe {
 		UPDATE_FN = Some(Box::new(move || update(&mut game_state, &mut engine)));
 	}

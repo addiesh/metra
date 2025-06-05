@@ -1,5 +1,4 @@
+pub use crate::asset::Asset;
 pub use crate::metro_main;
-pub use crate::{
-	Asset, Effect, Light, Material, Mesh, Metro, MetroStatus, Model, Resource, Shader, ShaderStage,
-	Sound, Texture,
-};
+pub use crate::resource::Resource;
+pub use crate::{Effect, Light, Mesh, Metro, MetroStatus, Model, Shader, Sound, Texture};

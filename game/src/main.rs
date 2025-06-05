@@ -7,7 +7,9 @@ use alloc::string::{String, ToString};
 use log::{debug, error, info, trace, warn};
 use metro::prelude::*;
 
-struct GameState;
+struct GameState {
+	_the_mesh: Resource<Mesh>,
+}
 
 impl Drop for GameState {
 	fn drop(&mut self) {
@@ -39,12 +41,16 @@ fn init(engine: &mut Metro) -> GameState {
 		*random_string.as_bytes()
 	);
 	info!("Passed save/load check!");
-	GameState
+	GameState {
+		_the_mesh: engine.new_unit_mesh(),
+	}
 }
 
 fn update(_state: &mut GameState, _engine: &mut Metro) -> MetroStatus {
 	// info!("update");
-	MetroStatus::Stop
+	// _engine.
+	MetroStatus::Continue
+	// MetroStatus::Stop
 }
 
 metro_main! {

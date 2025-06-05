@@ -4,6 +4,7 @@
  * © addie.sh 2025
  */
 
+// noinspection SpellCheckingInspection
 console.log(
 	"%c   \n%cMade with Metro",
 	// TODO: optimize the project-wide logo instead of creating a subset
@@ -30,14 +31,33 @@ const gl = canvas.getContext('webgl2');
  * @prop {() => void} exports.metroClean
  * 
 */
-
 /**
  * @typedef {WebAssembly.Instance & MetroExports} Metro
 */
 const context = {
 	/** @type {Metro} */
-	metro: null,
+	metro: undefined,
+
+	// TODO: this is slow, replace with something faster.
+	/** @type {Map<number, WebGLBuffer|WebGLProgram|WebGLShader|WebGLFramebuffer|WebGLRenderbuffer|WebGLTexture|WebGLVertexArrayObject>} */
+	objects: new Map(),
 };
+
+/**
+ * this is a horrible """algorithm""" and totally sucks.
+ * but I'm tired, and we have a massive performance budget
+ * @returns {number}
+ */
+function findKey() {
+	let key = context.objects.size + 1;
+	while (true) {
+		if (context.objects.get(key) === undefined) {
+			return key;
+		} else {
+			key = (key + 1) % 0xFFFFFFFF;
+		}
+	}
+}
 
 /** @type {?Uint8Array} */
 let cachedSaveBuffer = null;
@@ -46,6 +66,7 @@ let cachedSaveString = null;
 let textDecoder = new TextDecoder();
 let textEncoder = new TextEncoder();
 
+// noinspection JSUnusedGlobalSymbols
 const importObject = {
 	metroSys: {
 		/**
@@ -81,7 +102,7 @@ const importObject = {
 			let string = `%c[${levelStringMap[level - 1]} ${location}]%c ${content}`;
 			console[levelFnMap[level - 1]](
 				string,
-				"font-weight:800;color:color-mix(currentcolor,transparent)",
+				"font-weight:800;",
 				""
 			);
 		},
@@ -94,19 +115,29 @@ const importObject = {
 			return performance.now();
 		},
 
+		/**
+		 * @return {number}
+		 */
 		getRandom: function () {
 			return Math.random();
 		},
 
+		/**
+		 * @param {number} dataPtr The pointer to write to
+		 * @param {number} dataLen
+		 * @return {number} 0 on success, length required if the buffer is null/too small, u32::MAX on unknown error
+		 */
 		loadPersistent: function (
 			dataPtr,
+			// TODO: technically dataLen probably isn't necessary,
+			//		 but we don't have safeguards in place if the data changes mid-transfer.
 			dataLen,
 		) {
 			if (cachedSaveBuffer === null) {
 				try {
 					cachedSaveString = localStorage.getItem('metroPersistent');
 					if (cachedSaveString == null) {
-						cachedSaveBuffer = new Uint8Array();
+						cachedSaveBuffer = new Uint8Array(0);
 					} else {
 						cachedSaveBuffer = textEncoder.encode(cachedSaveString);
 					}
@@ -116,7 +147,7 @@ const importObject = {
 				}
 			}
 
-			if (dataPtr == 0 || dataLen == 0) {
+			if (dataPtr === 0 || dataLen === 0) {
 				return cachedSaveBuffer.byteLength;
 			} else {
 				// this branch should never be called if len == 0, as enforced by caller
@@ -126,6 +157,11 @@ const importObject = {
 			}
 		},
 
+		/**
+		 * @param {*} dataPtr 
+		 * @param {*} dataLen 
+		 * @returns {0|1} 1 on success or 0 otherwise.
+		 */
 		savePersistent: function (
 			dataPtr,
 			dataLen,
@@ -134,11 +170,92 @@ const importObject = {
 				let buf = context.metro.exports.memory.buffer.slice(dataPtr, dataPtr + dataLen);
 				cachedSaveString = textDecoder.decode(buf);
 				localStorage.setItem('metroPersistent', cachedSaveString);
-				cachedSaveBuffer = buf;
+				cachedSaveBuffer = new Uint8Array(buf);
 				return 1;
 			} catch (err) {
 				console.error("Error writing to persistent data:", err);
 				return 0;
+			}
+		},
+
+		createVertexArray: function () {
+			gl.createVertexArray();
+			// TODO:
+			return 0xACAB;
+		},
+
+		createShader: function (
+			shaderStage,
+			sourcePtr,
+			sourceLen,
+		) {
+			let shader = gl.createShader(
+				[gl.VERTEX_SHADER, gl.FRAGMENT_SHADER][shaderStage]
+			);
+			gl.shaderSource(
+				shader,
+				textDecoder.decode(context.metro.exports.memory.buffer.slice(sourcePtr, sourcePtr + sourceLen)),
+			);
+			gl.compileShader(shader);
+			if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+				console.error(`Failed to compile ${["vertex", "fragment"][shaderStage]} shader!`, gl.getShaderInfoLog(shader));
+				gl.deleteShader(shader);
+				return 0;
+			}
+
+			let key = findKey();
+
+			console.debug(`created shader with ID ${key}`);
+
+			context.objects.set(key, shader);
+			return key;
+		},
+
+		dropShader: function (shader) {
+			let obj = context.objects.get(shader);
+			if (obj === undefined) {
+				return 0;
+			} else {
+				gl.deleteBuffer(context.objects[shader]);
+				context.objects.delete(shader);
+				console.debug(`dropped shader with ID ${shader}`);
+				return 1;
+			}
+		},
+
+		createProgram: function (
+			vertex,
+			fragment,
+		) {
+			let program = gl.createProgram();
+			gl.attachShader(program, context.objects.get(vertex));
+			gl.attachShader(program, context.objects.get(fragment));
+			gl.linkProgram(program);
+
+			if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+				console.error("Failed to link shader program!", gl.getProgramInfoLog(program));
+				gl.deleteProgram(program);
+				return 0;
+			}
+
+			let key = findKey();
+
+			console.debug(`created program with ID ${key}`);
+
+			context.objects.set(key, program);
+
+			return key;
+		},
+
+		dropProgram: function (program) {
+			let obj = context.objects.get(program);
+			if (obj === undefined) {
+				return 0;
+			} else {
+				gl.deleteBuffer(context.objects[program]);
+				context.objects.delete(program);
+				console.debug(`dropped program with ID ${program}`);
+				return 1;
 			}
 		},
 
@@ -159,17 +276,38 @@ const importObject = {
 			);
 			gl.bufferData(
 				target,
-				dataLen,
 				context.metro.exports.memory.buffer.slice(dataPtr, dataPtr + dataLen),
 				usage
 			);
+			
+			let key = findKey();
+
+			console.debug(`created buffer with ID ${key}`);
+
+			context.objects.set(key, buffer);
+			return key;
+		},
+
+		dropBuffer: function (buffer) {
+			let obj = context.objects.get(buffer);
+			if (obj === undefined) {
+				return 0;
+			} else {
+				gl.deleteBuffer(context.objects[buffer]);
+				// context.freeBuffers.push()
+				context.objects.delete(buffer);
+				console.debug(`dropped buffer with ID ${buffer}`);
+				return 1;
+			}
 		}
+		
 	}
 };
 
 {
 	console.info("Loading Metro WASM...");
 	let bt = performance.now();
+	// noinspection JSValidateTypes
 	context.metro = (await WebAssembly.instantiateStreaming(
 		fetch("metro-game.wasm"),
 		importObject
@@ -187,9 +325,10 @@ const importObject = {
 
 	switch (u8[0]) {
 		case 0xAC: {
-			console.info("running on big-endian system, enabling tranpose flag");
+			console.info("running on big-endian system, enabling transpose flag");
 			view.setUint32(0, 1, true);
-			break;
+			throw Error("...is what it would say, if it actually did anything. TODO: implement");
+			// break;
 		}
 		case 0xAB: {
 			console.info("running on little-endian system, no corrections required");
@@ -198,7 +337,7 @@ const importObject = {
 		}
 		default: {
 			// :(
-			throw Error(`Eldritch endianness (0x${u8[0].toString('16')}${u8[1].toString('16')}${u8[2].toString('16')}${u8[3].toString('16')})`);
+			throw Error(`Eldritch endianness (0x${u8[0].toString(16)}${u8[1].toString(16)})`);
 		}
 	}
 }
@@ -208,7 +347,7 @@ let eventQueue = [];
 {
 	/** @type {Gamepad[]} */
 	let gamepads = [];
-	/** @type {Map<string, bool>} */
+	/** @type {Map<string, boolean>} */
 	let keyState = new Map();
 
 	canvas.addEventListener('keydown', e => {
@@ -226,7 +365,7 @@ let eventQueue = [];
 
 	window.addEventListener("gamepaddisconnected", e => {
 		console.log(`Gamepad disconnected at index ${e.gamepad.index}: ${e.gamepad.id}.`);
-		gamepads = gamepads.filter(v => v.index == e.gamepad.index);
+		gamepads = gamepads.filter(v => v.index === e.gamepad.index);
 		console.log(gamepads);
 	});
 }
@@ -240,7 +379,7 @@ function main() {
 
 	// gl.viewport
 	let res = context.metro.exports.metroUpdate();
-	if (res == 0) {
+	if (res === 0) {
 		isRunning = false;
 	}
 
