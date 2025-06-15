@@ -1,11 +1,8 @@
 //! Client implementation of the Metra Engine for WASM.
 //! This code has all been written by-hand, with love.
 
-use alloc::borrow::ToOwned;
 use alloc::format;
-use alloc::string::ToString;
 use core::num::NonZeroU32;
-use log::Log;
 
 #[unsafe(export_name = "metraVarBigEndian")]
 pub static mut METRA_HOST_BIG_ENDIAN: u32 = 0;

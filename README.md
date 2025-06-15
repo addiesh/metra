@@ -1,8 +1,9 @@
-<img src="metra-icon.svg" width="128px"/>
+<img src="metra-icon.svg" width="128px" alt="Metra logo"/>
 
 # The Metra Game Engine
 
 Metra is a framework/game engine for making 2D games for the web using Rust.
+Note that Metra is currently under active development and is not yet fit for use in production applications..
 
 # Features
 

@@ -22,7 +22,6 @@ use log::{debug, error};
 
 use crate::{asset::Asset, prelude::Resource, resource::ResourceTarget};
 
-mod arena;
 pub mod asset;
 mod logger;
 pub mod prelude;
