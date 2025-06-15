@@ -5,7 +5,7 @@ precision highp float;
 in vec2 a_position;
 in vec2 a_texcoord;
 
-uniform MetroUniversal {
+uniform MetraUniversal {
 	float time;
 	mat2 transform;
 };

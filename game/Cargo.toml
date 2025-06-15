@@ -5,4 +5,4 @@ edition = "2024"
 
 [dependencies]
 log = "0.4.27"
-metro = { path = "../metro" }
+metra = { path = "../metra" }

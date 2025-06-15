@@ -3,7 +3,7 @@
 extern crate alloc;
 
 #[cfg(not(target_arch = "wasm32"))]
-compile_error!("Metro must target WASM32");
+compile_error!("Metra must target WASM32");
 
 // lol, lmao.
 // #![forbid(unsafe_code)]
@@ -85,7 +85,7 @@ mod sys;
 // 	image.save("image_example.png").unwrap();
 // }
 
-pub struct Metro {
+pub struct Metra {
 	meshes: Vec<ResourceTarget<Mesh>>,
 	lights: Vec<ResourceTarget<Light>>,
 	shaders: Vec<ResourceTarget<Shader>>,
@@ -109,7 +109,7 @@ static UNIT_QUAD: ([[f32; 2]; 4], [[f32; 2]; 4], [[u16; 3]; 2]) = (
 static UNIVERSAL_VERTEX_SHADER: &str = include_str!("universal_vertex.glsl");
 static DEFAULT_FRAGMENT_SHADER: &str = include_str!("default_fragment.glsl");
 
-impl Metro {
+impl Metra {
 	fn new() -> Self {
 		let meshes = Vec::with_capacity(128);
 		let lights = Vec::with_capacity(32);
@@ -147,7 +147,7 @@ impl Metro {
 		unsafe { sys::sys_get_random() }
 	}
 
-	pub fn get_unit_quad(&self) -> Asset<Model> {
+	pub fn unit_quad(&self) -> Asset<Model> {
 		self.unit_quad.clone()
 	}
 
@@ -210,7 +210,7 @@ impl Metro {
 	// pub fn load_asset(&self) -> Asset {}
 }
 
-impl Drop for Metro {
+impl Drop for Metra {
 	fn drop(&mut self) {
 		debug!("engine state dropped");
 	}
@@ -232,7 +232,6 @@ pub struct Model {
 impl Model {
 	fn new(positions: &[[f32; 2]], coordinates: &[[f32; 2]], indices: &[[u16; 3]]) -> Self {
 		unsafe {
-			// let is_big_endian = sys::METRO_HOST_BIG_ENDIAN == 1;
 			let vao = sys::create_vertex_array().expect("failed to create VAO");
 			let positions: Box<[[f32; 2]]> = positions.into_iter().map(|e| *e).collect();
 			let coordinates: Box<[[f32; 2]]> = coordinates.into_iter().map(|e| *e).collect();
@@ -243,18 +242,21 @@ impl Model {
 				size_of_val(positions.deref()) as u32,
 			)
 			.expect("failed to create position buffer (RESOURCE LEAK)");
+
 			let coordinate_handle = sys::create_buffer(
 				sys::BufferType::Array,
 				coordinates.as_ptr() as u32,
 				size_of_val(coordinates.deref()) as u32,
 			)
 			.expect("failed to create coordinate buffer (RESOURCE LEAK)");
+
 			let index_handle = sys::create_buffer(
 				sys::BufferType::Element,
 				indices.as_ptr() as u32,
 				size_of_val(indices.deref()) as u32,
 			)
 			.expect("failed to create index buffer (RESOURCE LEAK)");
+
 			// todo!()
 			Self {
 				positions,
@@ -361,7 +363,7 @@ pub struct Effect {}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
-pub enum MetroStatus {
+pub enum MetraStatus {
 	/// Stops execution whenever possible and releases assets and resources.
 	Stop = 0,
 	/// Continues execution as normal.
@@ -370,13 +372,13 @@ pub enum MetroStatus {
 	// Yield = 2,
 }
 
-/// The beginning of a Metro game.
+/// The beginning of a Metra game.
 #[macro_export]
-macro_rules! metro_main {
+macro_rules! metra_main {
 	{ $init:expr, $update:expr } => {
-		#[unsafe(export_name = "metroMain")]
-		extern "C" fn __metro_main() {
-			::metro::run(
+		#[unsafe(export_name = "metraMain")]
+		extern "C" fn __metra_main() {
+			::metra::run(
 				$init,
 				$update
 			)
@@ -384,26 +386,26 @@ macro_rules! metro_main {
 	};
 }
 
-/// This function initializes the metro engine,
-/// and should only be called from within the [metro_main!] macro.
+/// This function initializes the Metra engine,
+/// and should only be called from within the [metra_main!] macro.
 // can you tell we're committing crimes against Rust?
 #[allow(static_mut_refs)]
 #[inline]
 pub fn run<T: 'static>(
-	init: fn(engine: &mut Metro) -> T,
-	update: fn(state: &mut T, engine: &mut Metro) -> MetroStatus,
+	init: fn(engine: &mut Metra) -> T,
+	update: fn(state: &mut T, engine: &mut Metra) -> MetraStatus,
 ) {
 	static mut HAS_SETUP: bool = false;
 	// possibly replace with a cell in the future?
-	static mut UPDATE_FN: Option<Box<dyn FnMut() -> MetroStatus>> = None;
+	static mut UPDATE_FN: Option<Box<dyn FnMut() -> MetraStatus>> = None;
 
-	#[unsafe(export_name = "metroUpdate")]
-	extern "C" fn metro_update() -> MetroStatus {
+	#[unsafe(export_name = "metraUpdate")]
+	extern "C" fn metra_update() -> MetraStatus {
 		unsafe { UPDATE_FN.as_mut().unwrap()() }
 	}
 
-	#[unsafe(export_name = "metroClean")]
-	extern "C" fn metro_clean() -> () {
+	#[unsafe(export_name = "metraClean")]
+	extern "C" fn metra_clean() -> () {
 		unsafe {
 			debug!("dropping closure");
 			drop(UPDATE_FN.take().unwrap());
@@ -420,7 +422,7 @@ pub fn run<T: 'static>(
 
 	logger::init();
 
-	let mut engine = Metro::new();
+	let mut engine = Metra::new();
 	let mut game_state = init(&mut engine);
 	unsafe {
 		UPDATE_FN = Some(Box::new(move || update(&mut game_state, &mut engine)));

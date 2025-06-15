@@ -1,4 +1,4 @@
-//! Client implementation of the Metro Engine for WASM.
+//! Client implementation of the Metra Engine for WASM.
 //! This code has all been written by-hand, with love.
 
 use alloc::borrow::ToOwned;
@@ -7,8 +7,8 @@ use alloc::string::ToString;
 use core::num::NonZeroU32;
 use log::Log;
 
-#[unsafe(export_name = "metroVarBigEndian")]
-pub static mut METRO_HOST_BIG_ENDIAN: u32 = 0;
+#[unsafe(export_name = "metraVarBigEndian")]
+pub static mut METRA_HOST_BIG_ENDIAN: u32 = 0;
 
 #[repr(u32)]
 pub enum BufferType {
@@ -50,7 +50,7 @@ impl From<log::Level> for LogLevel {
 	}
 }
 
-#[link(wasm_import_module = "metroSys")]
+#[link(wasm_import_module = "metraSys")]
 unsafe extern "C" {
 	#[link_name = "getRandom"]
 	pub fn sys_get_random() -> f64;

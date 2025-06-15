@@ -1,21 +1,21 @@
-<img src="metro-icon.svg" width="128px"/>
+<img src="metra-icon.svg" width="128px"/>
 
-# The Metro Game Engine
+# The Metra Game Engine
 
-Metro is a framework/game engine for making 2D games for the web using Rust.
+Metra is a framework/game engine for making 2D games for the web using Rust.
 
 # Features
 
 ## Declarative rendering
 
-Rendering in Metro is *declarative.* This makes it closer to a traditional game engine than many
-other frameworks (such as Raylib or low-level APIs like Vulkan or SDL3GPU). In Metro,
+Rendering in Metra is *declarative.* This makes it closer to a traditional game engine than many
+other frameworks (such as Raylib or low-level APIs like Vulkan or SDL3GPU). In Metra,
 after creating a Model (low-level mesh) and a Material (shader program), you may construct
 a Mesh, which renders on-screen for as long as it is alive. Dropping the Mesh stops rendering it.
 
 ## Post-processing effects
 
-A post-processing pass in Metro looks something like this:
+A post-processing pass in Metra looks something like this:
 1. render the entire game to a texture
 2. render a screen mesh using that texture and the effect material to another texture
 3. render that texture to the canvas

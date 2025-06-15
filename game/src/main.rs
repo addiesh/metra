@@ -5,7 +5,7 @@ extern crate alloc;
 
 use alloc::string::{String, ToString};
 use log::{debug, error, info, trace, warn};
-use metro::prelude::*;
+use metra::prelude::*;
 
 struct GameState {
 	_the_mesh: Resource<Mesh>,
@@ -17,7 +17,7 @@ impl Drop for GameState {
 	}
 }
 
-fn init(engine: &mut Metro) -> GameState {
+fn init(engine: &mut Metra) -> GameState {
 	trace!("hello from init!");
 	error!("hello from init!");
 	warn!("hello from init!");
@@ -46,14 +46,14 @@ fn init(engine: &mut Metro) -> GameState {
 	}
 }
 
-fn update(_state: &mut GameState, _engine: &mut Metro) -> MetroStatus {
+fn update(_state: &mut GameState, _engine: &mut Metra) -> MetraStatus {
 	// info!("update");
 	// _engine.
-	MetroStatus::Continue
+	MetraStatus::Continue
 	// MetroStatus::Stop
 }
 
-metro_main! {
+metra_main! {
 	init,
 	update
 }

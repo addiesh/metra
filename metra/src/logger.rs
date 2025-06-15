@@ -4,11 +4,11 @@ use alloc::format;
 use alloc::string::ToString;
 use log::Log;
 
-struct MetroLogger;
+struct MetraLogger;
 const LOG_LEVEL_FILTER: log::LevelFilter = log::LevelFilter::Trace;
-static LOGGER: MetroLogger = MetroLogger;
+static LOGGER: MetraLogger = MetraLogger;
 
-impl Log for MetroLogger {
+impl Log for MetraLogger {
 	fn enabled(&self, metadata: &log::Metadata) -> bool {
 		metadata.level() <= LOG_LEVEL_FILTER
 	}
