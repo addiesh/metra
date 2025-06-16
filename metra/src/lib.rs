@@ -18,7 +18,8 @@ use alloc::vec::Vec;
 use alloc::{borrow::ToOwned, boxed::Box};
 use base64::Engine;
 use core::num::NonZeroU32;
-use log::{debug, error};
+use core::ptr::NonNull;
+use log::{debug, error, warn};
 
 use crate::{asset::Asset, prelude::Resource, resource::ResourceTarget};
 
@@ -85,10 +86,10 @@ mod sys;
 // }
 
 pub struct Metra {
-	meshes: Vec<ResourceTarget<Mesh>>,
-	lights: Vec<ResourceTarget<Light>>,
-	shaders: Vec<ResourceTarget<Shader>>,
-	effects: Vec<ResourceTarget<Effect>>,
+	meshes: Vec<NonNull<ResourceTarget<Mesh>>>,
+	lights: Vec<NonNull<ResourceTarget<Light>>>,
+	effects: Vec<NonNull<ResourceTarget<Effect>>>,
+	shaders: Vec<NonNull<Shader>>,
 
 	unit_quad: Asset<Model>,
 	// TODO: shader pretty explicitly means "fragment shader" here.
@@ -109,7 +110,7 @@ static UNIVERSAL_VERTEX_SHADER: &str = include_str!("universal_vertex.glsl");
 static DEFAULT_FRAGMENT_SHADER: &str = include_str!("default_fragment.glsl");
 
 impl Metra {
-	fn new() -> Self {
+	pub(crate) fn new() -> Self {
 		let meshes = Vec::with_capacity(128);
 		let lights = Vec::with_capacity(32);
 		let shaders = Vec::with_capacity(16);
@@ -130,6 +131,42 @@ impl Metra {
 			universal_vertex,
 			default_fragment,
 		}
+	}
+
+	#[inline]
+	pub(crate) fn pre_update_internal(&mut self) {}
+
+	#[inline]
+	pub(crate) fn post_update_internal(&mut self, status: MetraStatus) {
+		fn iterate_targets<T>(
+			targets: &mut Vec<NonNull<ResourceTarget<T>>>,
+			func: fn(target: &mut T),
+		) {
+			targets.retain_mut(|a| unsafe {
+				// SAFETY: `a` is always allocated by a Box, ensuring proper alignment,
+				//		It will only ever be deallocated by this function
+				let target = a.as_mut();
+				match &mut target.data {
+					None => {
+						// remove from array and release resources.
+						// SAFETY: the NonNull will never be accessed again (removed from vec)
+						//		by the end of this block.
+						let boxed: Box<ResourceTarget<T>> = Box::from_raw(a.as_mut());
+						drop(boxed);
+						false
+					}
+					Some(data) => {
+						// run the closure and keep in the array
+						func(data);
+						true
+					}
+				}
+			});
+		}
+		iterate_targets(&mut self.meshes, |mesh| {
+			// TODO: render mesh
+		});
+		// TODO: render everything!
 	}
 
 	/// Returns the time elapsed since the start of the game, in milliseconds.
@@ -156,11 +193,13 @@ impl Metra {
 
 	#[must_use]
 	pub fn new_mesh(&mut self, model: Asset<Model>, shader: Asset<Shader>) -> Resource<Mesh> {
-		Resource::new(Mesh::new(
+		let (resource, ptr) = Resource::new(Mesh::new(
 			model,
 			self.universal_vertex.clone(),
 			shader.clone(),
-		))
+		));
+		self.meshes.push(ptr);
+		resource
 	}
 
 	#[must_use]
@@ -225,7 +264,7 @@ pub struct Model {
 	position_handle: NonZeroU32,
 	coordinate_handle: NonZeroU32,
 	index_handle: NonZeroU32,
-	vao: NonZeroU32,
+	vertex_array_object: NonZeroU32,
 }
 
 impl Model {
@@ -264,7 +303,7 @@ impl Model {
 				position_handle,
 				coordinate_handle,
 				index_handle,
-				vao,
+				vertex_array_object: vao,
 			}
 		}
 	}
@@ -273,6 +312,7 @@ impl Model {
 impl Drop for Model {
 	fn drop(&mut self) {
 		unsafe {
+			debug!("dropping model");
 			if !sys::drop_buffer(self.position_handle) {
 				error!("Failed to drop position buffer!")
 			}
@@ -282,13 +322,20 @@ impl Drop for Model {
 			if !sys::drop_buffer(self.index_handle) {
 				error!("Failed to drop index buffer!")
 			}
+			if !sys::drop_vertex_array(self.vertex_array_object) {
+				error!("Failed to drop vertex array!")
+			}
 		}
 	}
 }
 
+/// Meshes
+
 pub struct Mesh {
 	model: Asset<Model>,
 	shader: Asset<Shader>,
+	// TODO: this makes re-using shader programs impossible. This is, of course, silly.
+	// 		Fix with a shader program cache?
 	program: NonZeroU32,
 }
 
@@ -308,6 +355,7 @@ impl Mesh {
 
 impl Drop for Mesh {
 	fn drop(&mut self) {
+		debug!("dropping mesh");
 		if unsafe { !sys::drop_program(self.program) } {
 			error!("Failed to drop mesh shader program!")
 		}
@@ -351,6 +399,7 @@ impl Shader {
 impl Drop for Shader {
 	fn drop(&mut self) {
 		unsafe {
+			debug!("dropping shader");
 			if !sys::drop_shader(self.shader) {
 				error!("Failed to drop shader!")
 			}
@@ -368,6 +417,7 @@ pub enum MetraStatus {
 	/// Continues execution as normal.
 	Continue = 1,
 	// /// Continues execution, but with a higher tolerance for delays.
+	// /// Use this for things like pause menus, where performance is less of a concern.
 	// Yield = 2,
 }
 
@@ -388,11 +438,13 @@ macro_rules! metra_main {
 /// This function initializes the Metra engine,
 /// and should only be called from within the [metra_main!] macro.
 // can you tell we're committing crimes against Rust?
+// We **have** to use global state here in order to get the registration-based API I really wanted.
+//
 #[allow(static_mut_refs)]
 #[inline]
 pub fn run<T: 'static>(
-	init: fn(engine: &mut Metra) -> T,
-	update: fn(state: &mut T, engine: &mut Metra) -> MetraStatus,
+	init_callback: fn(engine: &mut Metra) -> T,
+	update_callback: fn(state: &mut T, engine: &mut Metra) -> MetraStatus,
 ) {
 	static mut HAS_SETUP: bool = false;
 	// possibly replace with a cell in the future?
@@ -422,8 +474,35 @@ pub fn run<T: 'static>(
 	logger::init();
 
 	let mut engine = Metra::new();
-	let mut game_state = init(&mut engine);
+	// The game state will be set to None when the game requests quit (via MetaStatus::Stop)
+	let mut game_state = Some(init_callback(&mut engine));
 	unsafe {
-		UPDATE_FN = Some(Box::new(move || update(&mut game_state, &mut engine)));
+		UPDATE_FN = Some(Box::new(move || {
+			// This closure captures the engine and the game state,
+			// which at this point have known sizes.
+			engine.pre_update_internal();
+
+			match &mut game_state {
+				None => {
+					warn!("update called after game state was dropped");
+					MetraStatus::Stop
+				}
+				Some(state) => {
+					let status = update_callback(state, &mut engine);
+
+					if status == MetraStatus::Stop {
+						debug!("dropping game state");
+						game_state = None;
+						debug!("game state dropped, all assets/resources should be freed.");
+						debug!("performing final internal update");
+						engine.post_update_internal(status);
+					} else {
+						engine.post_update_internal(status);
+					}
+
+					status
+				}
+			}
+		}));
 	}
 }

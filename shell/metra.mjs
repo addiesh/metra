@@ -186,6 +186,23 @@ const importObject = {
 		},
 
 		/**
+		 * @param {number} vertexArray
+		 * @returns {0|1}
+		 */
+		dropVertexArray: function (vertexArray) {
+			let obj = context.objects.get(vertexArray);
+			if (obj === undefined) {
+				return 0;
+			} else {
+				gl.deleteVertexArray(context.objects[vertexArray]);
+				// context.freeBuffers.push()
+				context.objects.delete(vertexArray);
+				console.debug(`dropped buffer with ID ${vertexArray}`);
+				return 1;
+			}
+		},
+
+		/**
 		 * @param {0|1} shaderStage 
 		 * @param {number} sourcePtr 
 		 * @param {number} sourceLen
@@ -404,7 +421,7 @@ let isRunning = true;
 // initialize stuff
 context.metra.exports.metraMain();
 
-function main() {
+function update() {
 	// gl.viewport
 	let res = context.metra.exports.metraUpdate();
 	if (res === 0) {
@@ -419,8 +436,14 @@ function main() {
 
 	gl.flush();
 
+	let error = gl.getError();
+	// noinspection EqualityComparisonWithCoercionJS
+	if (error !== gl.NO_ERROR) {
+		console.error(`encountered WebGL error (code ${error})`);
+	}
+
 	if (isRunning) {
-		requestAnimationFrame(main);
+		requestAnimationFrame(update);
 	} else {
 		context.metra.exports.metraClean();
 	}
@@ -434,4 +457,4 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-main();
+update();

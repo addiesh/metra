@@ -49,8 +49,8 @@ fn init(engine: &mut Metra) -> GameState {
 fn update(_state: &mut GameState, _engine: &mut Metra) -> MetraStatus {
 	// info!("update");
 	// _engine.
-	MetraStatus::Continue
-	// MetroStatus::Stop
+	// MetraStatus::Continue
+	MetraStatus::Stop
 }
 
 metra_main! {

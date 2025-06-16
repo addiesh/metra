@@ -1,7 +1,6 @@
 //! Client implementation of the Metra Engine for WASM.
 //! This code has all been written by-hand, with love.
 
-use alloc::format;
 use core::num::NonZeroU32;
 
 #[unsafe(export_name = "metraVarBigEndian")]
@@ -19,6 +18,7 @@ pub enum BufferType {
 }
 
 #[repr(u32)]
+#[allow(unused)]
 pub enum LogLevel {
 	/// Designates very serious errors.
 	Error = 1,
@@ -100,6 +100,7 @@ unsafe extern "C" {
 #[cfg(all(not(test), target_arch = "wasm32"))]
 #[panic_handler]
 fn wasm_panic_handler(panic_info: &core::panic::PanicInfo) -> ! {
+	use alloc::format;
 	let message = format!("{}", panic_info.message());
 	let loc = panic_info.location().map(|loc| format!("{loc}"));
 	unsafe {
