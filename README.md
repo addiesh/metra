@@ -5,6 +5,28 @@
 Metra is a framework/game engine for making 2D games for the web using Rust.
 Note that Metra is currently under active development and is not yet fit for use in production applications.
 
+# Current Roadmap
+
+Baseline:
+- [ ] Keyboard input
+- [ ] Rendering
+  - [ ] meshes
+  - [ ] post-processing
+  - [ ] lighting
+- [ ] Audio
+  - [ ] burst
+  - [ ] drone
+  - [ ] effects
+- [ ] Asset manifests and loading
+
+Stretch:
+- [ ] Gamepad support
+- [ ] Networking
+
+Unplanned:
+- Native builds
+- Multi-window support
+
 # Features
 
 ## Declarative rendering
@@ -31,8 +53,8 @@ On-demand loading of assets is a future feature.
 ## Audio processing
 
 Current plan is for two modes:
-- stateful (music, ambience)
-- instant (play-and-forget effects)
+- drone (music, ambience)
+- burst (play-and-forget effects)
 
 Allow for pausing
 

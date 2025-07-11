@@ -424,16 +424,19 @@ pub enum MetraStatus {
 /// The beginning of a Metra game.
 #[macro_export]
 macro_rules! metra_main {
-	{ $init:expr, $update:expr } => {
+	{ $manifest:expr, $init:expr, $update:expr } => {
 		#[unsafe(export_name = "metraMain")]
 		extern "C" fn __metra_main() {
 			::metra::run(
+				$manifest,
 				$init,
 				$update
 			)
 		}
 	};
 }
+
+pub struct MetraResourceManifest;
 
 /// This function initializes the Metra engine,
 /// and should only be called from within the [metra_main!] macro.
@@ -443,6 +446,7 @@ macro_rules! metra_main {
 #[allow(static_mut_refs)]
 #[inline]
 pub fn run<T: 'static>(
+	_manifest: MetraResourceManifest,
 	init_callback: fn(engine: &mut Metra) -> T,
 	update_callback: fn(state: &mut T, engine: &mut Metra) -> MetraStatus,
 ) {

@@ -1,8 +1,48 @@
 /**
  * Metra JS shell
  * Made with Love (care) and Hate (web development)
- * © addie.sh 2025
+ * (c) addie.sh 2025
  */
+
+/**
+ * @typedef {Object} MetraExports
+ * @prop {Object} exports
+ * @prop {WebAssembly.Memory} exports.memory
+ * @prop {WebAssembly.Global} exports.metraVarBigEndian
+ * @prop {() => 0|1} exports.metraUpdate
+ * @prop {() => void} exports.metraMain
+ * @prop {() => void} exports.metraClean
+ */
+
+/**
+ * @typedef {WebAssembly.Instance & MetraExports} Metra
+ */
+
+/**
+ * @typedef {Object} MetraResourceTexture
+ * @prop {"texture"} resourceType
+ * @prop {HTMLImageElement} data
+ */
+
+/**
+ * @typedef {Object} MetraResourceSound
+ * @prop {"sound"} resourceType
+ * @prop {HTMLAudioElement} data
+ */
+
+/**
+ * @typedef {MetraResourceTexture|MetraResourceSound} MetraResource
+ * @prop {string} checksum A precomputed SHA-256 hash of the resource, to be compared against any manifest or source.
+ */
+
+/**
+ * @typedef {Object} MetraResourceManifestEntry
+ * @prop {"texture"|"sound"} resourceType The type of resource.
+ * TODO: add width/height hints to texture
+ * @prop {string} path A path to the resource.
+ * @prop {string} checksum A precomputed SHA-256 hash of the resource, to be compared against any manifest or source.
+ */
+
 
 // noinspection SpellCheckingInspection
 console.log(
@@ -12,28 +52,36 @@ console.log(
 	"color:light-dark(#000,#fff);font-size:32px;font-family:Inter Display,Inter,system-ui;",
 );
 console.log(
-	"%c© addie.sh",
+	"%c\u00A9 addie.sh",
 	"color:light-dark(#000,#fff);font-size:16px;font-family:Inter Display,Inter,system-ui;"
-)
+);
+
+{
+	// https://bsky.app/profile/addie.sh/post/3lqq6ixhjp22q
+	let u16 = new Uint16Array([0xACAB]);
+	let u8 = new Uint8Array(u16.buffer);
+
+	switch (u8[0]) {
+		case 0xAC: {
+			throw Error("Big-endian systems are not supported!");
+		}
+		case 0xAB: {
+			console.info("Running on little-endian system, no corrections required");
+			break;
+		}
+		default: {
+			// :(
+			throw Error(`Eldritch endianness (0x${u8[0].toString(16)}${u8[1].toString(16)})`);
+		}
+	}
+}
 
 /** @type {HTMLCanvasElement} */
 const canvas = document.getElementById('metra');
 /** @type {WebGL2RenderingContext} */
 const gl = canvas.getContext('webgl2');
 
-/**
- * @typedef {object} MetraExports
- * @prop {object} exports
- * @prop {WebAssembly.Memory} exports.memory
- * @prop {WebAssembly.Global} exports.metraVarBigEndian
- * @prop {() => 0|1} exports.metraUpdate
- * @prop {() => void} exports.metraMain
- * @prop {() => void} exports.metraClean
- * 
-*/
-/**
- * @typedef {WebAssembly.Instance & MetraExports} Metra
-*/
+
 const context = {
 	/** @type {Metra} */
 	metra: undefined,
@@ -66,6 +114,30 @@ let cachedSaveString = null;
 // note to self: JS ignores null bytes
 let textDecoder = new TextDecoder();
 let textEncoder = new TextEncoder();
+
+// These variables are for engine-wide resources.
+/** @type {Record<string, MetraResource>} */
+let resourceBank = {};
+
+// TODO: get a resource manifest from somewhere, either embedded in the binary or exported to a separate file
+/** @type {Record<string, MetraResourceManifestEntry>} */
+let resourceManifest = {
+	"antonymph": {
+		resourceType: 'sound',
+		path: "resources/antonymph.wav",
+		checksum: "c44c33dc1fd8c50591cf6544c0b1aa8bf09454c7fc197334e69d0ac80d6df9c9"
+	},
+	"noise": {
+		resourceType: 'texture',
+		path: "resources/noise.png",
+		checksum: "7e8f8d20fea0d8645e77cb4b43678d3257c91e0ab09c6cd9e14e6d6b3676c6a1"
+	},
+	"rust": {
+		resourceType: 'texture',
+		path: "resources/rust.gif",
+		checksum: "1ef8b040bbc80b5a741afe429ae3110af3cbdc8ef5b7726ca64d2d6f0afd0cf5"
+	}
+};
 
 // noinspection JSUnusedGlobalSymbols
 const importObject = {
@@ -180,6 +252,7 @@ const importObject = {
 		},
 
 		createVertexArray: function () {
+			console.warn("metraSys.createVertexArray: stub");
 			gl.createVertexArray();
 			// TODO:
 			return 0xACAB;
@@ -351,41 +424,75 @@ const importObject = {
 };
 
 {
-	console.info("Loading Metra WASM...");
+	console.info("Loading Metra...");
+	console.group("Loading steps");
 	let bt = performance.now();
-	// noinspection JSValidateTypes
-	context.metra = (await WebAssembly.instantiateStreaming(
+	console.info(`Loading Metra WASM`);
+	let metraSourcePromise = WebAssembly.instantiateStreaming(
 		fetch("metra-game.wasm"),
 		importObject
-	)).instance;
-	let pt = performance.now();
-	console.info(`Done loading! (complete in ${pt - bt}ms)`);
-}
+	);
+	metraSourcePromise.then(() => {
+		let delta = performance.now() - bt;
+		console.info(`Loaded Metra WASM in ${delta}ms`);
+	});
 
-{
-	// https://bsky.app/profile/addie.sh/post/3lqq6ixhjp22q
-	let u16 = new Uint16Array([0xACAB]);
-	let u8 = new Uint8Array(u16.buffer);
-	let addr = context.metra.exports.metraVarBigEndian.value;
-	let view = new DataView(context.metra.exports.memory.buffer, addr, 4);
+	let resourcePromise = Promise.all(Object.entries(resourceManifest).map((async value => {
+		let resourceId = value[0];
+		let resourceEntry = value[1];
+		let canonicalPath = "./" + resourceEntry.path;
+		switch (resourceEntry.resourceType) {
+			case "sound": {
+				console.info(`Loading sound file from "${canonicalPath}"`);
+				let audioElement = new Audio(canonicalPath);
+				audioElement.preload = "auto";
+				return await new Promise((resolve, reject) => {
+					audioElement.addEventListener('error', err => {
+						let delta = performance.now() - bt;
+						console.error(`Failed to load sound "${resourceId}" after ${delta}ms!`);
+						reject(err);
+					});
+					audioElement.addEventListener('canplaythrough', () => {
+						let delta = performance.now() - bt;
+						console.info(`Loaded sound "${resourceId}" in ${delta}ms`);
+						resolve(audioElement);
+					});
+				});
+			}
+			case "texture": {
+				console.info(`Loading texture from "${canonicalPath}"`);
+				let imgElement = new Image();
+				imgElement.src = canonicalPath;
+				return await new Promise((resolve, reject) => {
+					// let hasErrored = false;
+					// let hasLoaded = false;
+					imgElement.addEventListener('error', err => {
+						let delta = performance.now() - bt;
+						console.error(`Failed to load texture \"${resourceId}\" after ${delta}ms!`);
+						reject(err);
+					});
+					imgElement.addEventListener('load', () => {
+						let delta = performance.now() - bt;
+						console.info(`Loaded texture \"${resourceId}\" in ${delta}ms`);
+						resolve(imgElement);
+					});
+				});
+			}
+			default: {
+				console.error("Invalid ");
+				return null;
+			}
+		}
+	})));
 
-	switch (u8[0]) {
-		case 0xAC: {
-			console.info("running on big-endian system, enabling transpose flag");
-			view.setUint32(0, 1, true);
-			throw Error("...is what it would say, if it actually did anything. TODO: implement");
-			// break;
-		}
-		case 0xAB: {
-			console.info("running on little-endian system, no corrections required");
-			view.setUint32(0, 0, true);
-			break;
-		}
-		default: {
-			// :(
-			throw Error(`Eldritch endianness (0x${u8[0].toString(16)}${u8[1].toString(16)})`);
-		}
-	}
+	// resourceBank.
+	// noinspection JSValidateTypes
+	context.metra = (await metraSourcePromise).instance;
+	await resourcePromise;
+	console.groupEnd();
+
+	let totalDelta = performance.now() - bt;
+	console.info(`Done loading! Took ${totalDelta}ms total.`);
 }
 
 let eventQueue = [];
@@ -402,6 +509,8 @@ let eventQueue = [];
 	canvas.addEventListener('keyup', e => {
 
 	});
+
+	// TODO: future, gamepad support
 
 	window.addEventListener("gamepadconnected", e => {
 		gamepads.push(e.gamepad);

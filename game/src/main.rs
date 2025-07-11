@@ -54,6 +54,8 @@ fn update(_state: &mut GameState, _engine: &mut Metra) -> MetraStatus {
 }
 
 metra_main! {
+	// TODO: fix resource manifests
+	include!("manifest"),
 	init,
 	update
 }

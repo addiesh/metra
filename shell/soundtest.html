@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="icon" sizes="512x512" href="metra-icon.png">
+	<link rel="apple-touch-icon" sizes="512x512" href="metra-icon.png">
+	<title>Sound Test</title>
+	<style>
+		html {
+			background-color: #0c1521;
+			color: #fff;
+            font-family: 'Inter Display', system-ui;
+		}
+
+		html,
+		body {
+			display: block;
+			position: fixed;
+			margin: 0;
+			padding: 0;
+			width: 100%;
+			height: 100%;
+			touch-action: none;
+		}
+
+        body {
+			padding: 16px;
+        }
+
+		@media (prefers-color-scheme: light) {
+			html {
+				background-color: #fff;
+				color: #000
+			}
+		}
+	</style>
+</head>
+
+<body>
+<h1>sound test</h1>
+<button id="activate-ctx">begin</button>
+<button id="toggle-connect" hidden>connect</button>
+</body>
+
+<script type="module">
+	// the web audio API is a nightmare.
+	const toggleConnectButton = document.getElementById('toggle-connect');
+
+	const audioCtx = new AudioContext();
+
+	if (audioCtx.state !== 'running') {
+		const activateButton = document.getElementById('activate-ctx');
+		activateButton.addEventListener('click', async () => {
+			await audioCtx.resume();
+			console.info("resumed audio ctx");
+		});
+	}
+
+	let isConnected = false;
+
+	let audioElement = new Audio("./resources/eek.wav");
+	let audioElementNode = audioCtx.createMediaElementSource(audioElement);
+	audioElement.addEventListener('canplaythrough', () => {
+		toggleConnectButton.hidden = false;
+	});
+
+	let reverb = new ConvolverNode(audioCtx, {
+		disableNormalization: false,
+		buffer: await audioCtx.decodeAudioData(await (await fetch("./resources/724871__djericmark__1.wav")).arrayBuffer())
+	});
+	let grow = new GainNode(audioCtx, {
+		gain: 2.0
+	});
+	let shrink = new GainNode(audioCtx, {
+		gain: 0.5
+	});
+	let merger = new ChannelMergerNode(audioCtx, {});
+	audioElementNode.connect(reverb);
+	reverb.connect(grow);
+	audioElementNode.connect(shrink);
+	grow.connect(merger, 0, 0);
+	grow.connect(merger, 0, 1);
+	shrink.connect(merger, 0, 0);
+	shrink.connect(merger, 0, 1);
+	merger.connect(audioCtx.destination);
+
+	toggleConnectButton.addEventListener('click', () => {
+		if (isConnected) {
+			audioElement.pause();
+			isConnected = false;
+			// audioElementNode.disconnect();
+		} else {
+			audioElement.play();
+			isConnected = true;
+			// audioElementNode.connect(audioCtx.destination);
+		}
+	});
+
+	// audioCtx.destination
+</script>
+
+</html>

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Grandma's Heavy Metal Festival Journal</title>
+</head>
+
+<body>
+	<canvas id="joj" style="background-color: #000; border: solid 1px #000;" width="640" height="480"></canvas>
+</body>
+
+<script type="module">
+	/** @type {HTMLCanvasElement} */
+	const canvas = document.getElementById('joj');
+	const ctx = canvas.getContext('2d');
+
+	/** @typedef {{x: number, y: number}} Vec2 */
+
+	/** @type {Vec2[][]} */
+	let meshes = [];
+
+	let os = 200;
+
+	meshes.push(
+		[
+			{ x: os, y: os },
+			{ x: os + 80, y: os },
+			{ x: os + 80, y: os + 80 },
+			{ x: os, y: os + 80 },
+		],
+	);
+
+	{
+		const r = 40;
+		const n = 32;
+		const tau = Math.PI * 2.0;
+		/** @type {Vec2[]} */
+		let vertices = [];
+		for (let i = 0; i < n; i++) {
+			let theta = i * tau / (n);
+			vertices.push({
+				x: Math.cos(theta) * r + 100,
+				y: Math.sin(theta) * r + 100,
+			});
+			// console.log(`theta = ${theta}`);
+		}
+		meshes.push(vertices);
+	}
+
+	let lightSource = { x: 300, y: 300, };
+
+	/**
+	 * @param {Vec2} o
+	 * @param {Vec2} d
+	 * @returns {?Vec2}
+	 */
+	function computeRay(o, d) {
+		/** @type {?Vec2} */
+		let bestIntersection = null;
+		let bestDistance = Infinity;
+		let meshes2 = [
+			...meshes,
+			// viewport mesh
+			[
+				{ x: 0, y: 0 },
+				{ x: ctx.canvas.width, y: 0 },
+				{ x: ctx.canvas.width, y: ctx.canvas.height },
+				{ x: 0, y: ctx.canvas.height }
+			]
+		];
+		for (let mesh of meshes2) {
+			for (let i in mesh) {
+				let a = mesh[i];
+				let b = mesh[(+i + 1) % mesh.length];
+
+				/** @type {Vec2} */
+				let computedPoint;
+
+				// for the case where a line-intercept formula has an undefined slope
+				if (a.x !== b.x) {
+					let m = (b.y - a.y) / (b.x - a.x);
+					let m2 = d.y / d.x;
+					let numerator = a.y - o.y - (m * a.x) + (m2 * o.x);
+					let denominator = m2 - m;
+					let computedX = numerator / denominator;
+					let computedY = m * (computedX - a.x) + a.y;
+					// console.info(`computed (${computedX}, ${computedY})`);
+					if (computedX >= Math.min(a.x, b.x) && computedX <= Math.max(a.x, b.x)) {
+						computedPoint = { x: computedX, y: computedY };
+					} else {
+						continue;
+					}
+				} else {
+					let m = (b.x - a.x) / (b.y - a.y);
+					let m2 = d.x / d.y;
+					let numerator = o.x - a.x + m * a.y - m2 * o.y;
+					let denominator = m - m2;
+					let computedY = numerator / denominator;
+					let computedX = m * (computedY - a.y) + a.x;
+					// console.info(`computed (${computedX}, ${computedY})`);
+					if (computedY >= Math.min(a.y, b.y) && computedY <= Math.max(a.y, b.y)) {
+						computedPoint = { x: computedX, y: computedY };
+					} else {
+						continue;
+					}
+				}
+
+				// ctx.fillStyle = "#8000ff80";
+				// ctx.beginPath();
+				// ctx.ellipse(computedPoint.x, computedPoint.y, 3,3, 0, 0, Math.PI * 2);
+				// ctx.fill();
+				// ctx.closePath();
+
+				let xx = computedPoint.x - o.x;
+				let yy = computedPoint.y - o.y;
+				let dist = Math.sqrt(xx * xx + yy * yy);
+				if (dist < bestDistance
+					&& Math.sign(xx) === Math.sign(d.x)
+					&& Math.sign(yy) === Math.sign(d.y)
+				) {
+					bestIntersection = computedPoint;
+					bestDistance = dist;
+				}
+			}
+		}
+		return bestIntersection;
+	}
+
+	function render() {
+		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+		ctx.lineWidth = 1;
+		ctx.strokeStyle = "#fff";
+		for (let mesh of meshes) {
+			// console.info("rendering mesh:");
+			for (let i in mesh) {
+				// console.info(`vert i=${i}`);
+				let i2 = (+i + 1) % mesh.length;
+				let a = mesh[i];
+				let b = mesh[i2];
+				ctx.beginPath();
+				ctx.moveTo(a.x, a.y);
+				ctx.lineTo(b.x, b.y);
+				ctx.stroke();
+				ctx.closePath();
+			}
+		}
+
+		{
+			// let allVerticesReal = [
+			// 	...meshes,
+			// 	// viewport mesh
+			// 	[
+			// 		{ x: 0, y: 0 },
+			// 		{ x: ctx.canvas.width, y: 0 },
+			// 		{ x: ctx.canvas.width, y: ctx.canvas.height },
+			// 		{ x: 0, y: ctx.canvas.height }
+			// 	]
+			// ].flat();
+			// ctx.lineWidth = 1;
+			// ctx.strokeStyle = "#ff0080c0";
+			// for (let i = 0; i < allVerticesReal.length; i++) {
+			// 	ctx.beginPath();
+			// 	// ctx.beginPath();
+			// 	let v = allVerticesReal[i];
+			// 	ctx.moveTo(lightSource.x, lightSource.y);
+			// 	ctx.lineTo(v.x, v.y);
+			// 	ctx.stroke();
+			// 	ctx.closePath();
+			// }
+		}
+
+		/** @type {{x: number, y: number}[]} */
+		let allVertices = [];
+
+		const vertFn = vert => {
+			for (let offset of [-0.0001, 0, 0.0001]) {
+			// for (let offset of [0]) {
+				let theta = Math.atan2(
+					vert.y - lightSource.y,
+					vert.x - lightSource.x,
+				);
+				let point = computeRay(lightSource,
+					{
+						// x: vert.x - lightSource.x,
+						// y: vert.y - lightSource.y,
+						x: Math.cos(theta + offset),
+						y: Math.sin(theta + offset),
+					}
+				);
+				if (point !== null) {
+					allVertices.push(point);
+				}
+			}
+		};
+		meshes.forEach(mesh => mesh.forEach(vertFn));
+		// vertFn(meshes[0][0]);
+		[
+			{ x: 0, y: 0 },
+			{ x: ctx.canvas.width, y: 0 },
+			{ x: ctx.canvas.width, y: ctx.canvas.height },
+			{ x: 0, y: ctx.canvas.height }
+		].forEach(vertFn);
+
+		allVertices.sort((a, b) => {
+			let aTheta = Math.atan2(
+				a.y - lightSource.y,
+				a.x - lightSource.x,
+			);
+			let bTheta = Math.atan2(
+				b.y - lightSource.y,
+				b.x - lightSource.x,
+			);
+			return aTheta - bTheta;
+		});
+
+		// ctx.fillStyle = "#00ffc040";
+		// for (let vert of allVertices) {
+		// 	ctx.beginPath();
+		// 	ctx.ellipse(vert.x, vert.y, 8, 8, 0, 0, Math.PI * 2);
+		// 	ctx.fill();
+		// 	ctx.closePath();
+		// }
+
+		ctx.beginPath();
+		ctx.lineWidth = 1;
+		ctx.strokeStyle = "#ff0080c0";
+		ctx.moveTo(allVertices[0].x, allVertices[0].y);
+		for (let i = 1; i < allVertices.length; i += 2) {
+			// ctx.beginPath();
+			let v1 = allVertices[i];
+			let v2 = allVertices[(i + 1) % allVertices.length];
+			// ctx.moveTo(lightSource.x, lightSource.y);
+			ctx.lineTo(v1.x, v1.y);
+			ctx.lineTo(v2.x, v2.y);
+			// ctx.stroke();
+			// ctx.closePath();
+		}
+		ctx.fill();
+		ctx.closePath();
+
+		ctx.beginPath();
+		ctx.fillStyle = "#ffd00080";
+		ctx.ellipse(lightSource.x, lightSource.y, 16, 16, 0, 0, Math.PI * 2);
+		ctx.fill();
+		ctx.closePath();
+
+		requestAnimationFrame(render);
+	}
+
+	canvas.addEventListener('mousemove', ev => {
+		lightSource.x = ev.clientX;
+		lightSource.y = ev.clientY;
+	});
+
+	requestAnimationFrame(render);
+</script>
+
+</html>

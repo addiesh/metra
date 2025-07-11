@@ -1,8 +1,9 @@
 [workspace]
 resolver = "3"
-members = ["metra", "game", "station"]
+members = ["metra", "game", "metra-station"]
 default-members = ["metra"]
 
+# I wish I could specify these profile options per-crate, but alas
 [profile.dev]
 panic = "abort"
 

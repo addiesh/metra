@@ -5,6 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/game/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/metra/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/station/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/metra-station/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />
