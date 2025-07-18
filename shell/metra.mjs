@@ -62,16 +62,14 @@ console.log(
 	let u8 = new Uint8Array(u16.buffer);
 
 	switch (u8[0]) {
-		case 0xAC: {
-			throw Error("Big-endian systems are not supported!");
-		}
 		case 0xAB: {
 			console.info("Running on little-endian system, no corrections required");
 			break;
 		}
+		case 0xAC:
 		default: {
 			// :(
-			throw Error(`Eldritch endianness (0x${u8[0].toString(16)}${u8[1].toString(16)})`);
+			throw Error(`Unsupported endianness (0x${u8[0].toString(16)}${u8[1].toString(16)})`);
 		}
 	}
 }
