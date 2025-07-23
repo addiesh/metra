@@ -85,17 +85,35 @@ mod sys;
 // 	image.save("image_example.png").unwrap();
 // }
 
+#[derive(Copy, Clone)]
+#[repr(packed)]
+struct UniversalShaderUniform {
+	time: f32,
+	transform: [f32; 4],
+}
+
+impl Default for UniversalShaderUniform {
+	fn default() -> Self {
+		Self {
+			time: 0.0,
+			transform: [1.0, 0.0, 0.0, 1.0],
+		}
+	}
+}
+
+impl UniversalShaderUniform {
+	const _ASSERT: () = [()][size_of::<UniversalShaderUniform>() - 20];
+}
+
 pub struct Metra {
 	meshes: Vec<NonNull<ResourceTarget<Mesh>>>,
 	lights: Vec<NonNull<ResourceTarget<Light>>>,
 	effects: Vec<NonNull<ResourceTarget<Effect>>>,
-	shaders: Vec<NonNull<Shader>>,
+	shaders: Vec<NonNull<Material>>,
 
 	unit_quad: Asset<Model>,
-	// TODO: shader pretty explicitly means "fragment shader" here.
-	//		 This is a blatant misuse of API.
-	universal_vertex: Asset<Shader>,
-	default_fragment: Asset<Shader>,
+	universal_vertex: NonZeroU32,
+	default_material: Asset<Material>,
 	// standard_vertex:
 	// model_cache
 }
@@ -103,7 +121,7 @@ pub struct Metra {
 static UNIT_QUAD: ([[f32; 2]; 4], [[f32; 2]; 4], [[u16; 3]; 2]) = (
 	[[-1., -1.], [1.0, -1.], [1.0, 1.0], [-1., 1.0]],
 	[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
-	[[0, 1, 2], [2, 3, 0]],
+	[[0, 1, 2], [0, 2, 3]],
 );
 
 static UNIVERSAL_VERTEX_SHADER: &str = include_str!("universal_vertex.glsl");
@@ -118,9 +136,16 @@ impl Metra {
 
 		let unit_quad = Asset::new(Model::new(&UNIT_QUAD.0, &UNIT_QUAD.1, &UNIT_QUAD.2));
 
-		let universal_vertex = Asset::new(Shader::new(UNIVERSAL_VERTEX_SHADER, true));
+		let universal_vertex = unsafe {
+			sys::create_shader(
+				0,
+				UNIVERSAL_VERTEX_SHADER.as_ptr() as u32,
+				UNIVERSAL_VERTEX_SHADER.len() as u32,
+			)
+			.expect("Failed to compile fragment shader!")
+		};
 
-		let default_fragment = Asset::new(Shader::new(DEFAULT_FRAGMENT_SHADER, false));
+		let default_material = Asset::new(Material::new(DEFAULT_FRAGMENT_SHADER, universal_vertex));
 
 		Self {
 			meshes,
@@ -129,15 +154,12 @@ impl Metra {
 			effects,
 			unit_quad,
 			universal_vertex,
-			default_fragment,
+			default_material,
 		}
 	}
 
 	#[inline]
-	pub(crate) fn pre_update_internal(&mut self) {}
-
-	#[inline]
-	pub(crate) fn post_update_internal(&mut self, status: MetraStatus) {
+	pub(crate) fn update_internal(&mut self, status: MetraStatus) {
 		fn iterate_targets<T>(
 			targets: &mut Vec<NonNull<ResourceTarget<T>>>,
 			func: fn(target: &mut T),
@@ -163,8 +185,28 @@ impl Metra {
 				}
 			});
 		}
+
+		// self.universal_shader_uniform
+		// 	.upload(&[UniversalShaderUniform {
+		// 		time: unsafe { sys::get_time() as f32 },
+		// 		transform: [1.0, 0.0, 0.0, 1.0],
+		// 	}]);
+
+		// TODO: use uniform blocks to share universal shader inputs (time/transform)!!!
+		//		 you already added support for uniform buffers anyway
 		iterate_targets(&mut self.meshes, |mesh| {
 			// TODO: render mesh
+			unsafe {
+				sys::bind_vertex_array(mesh.model.vertex_array_handle);
+				mesh.model.positions.bind();
+				mesh.model.coordinates.bind();
+				mesh.model.indices.bind();
+				mesh.material.bind();
+				// the multiplication is because each triangle is an element in the greater array
+				let index_count = mesh.model.indices.len() as u32 * 3;
+				sys::draw_triangles(index_count);
+				debug!("drew mesh with {index_count} indices");
+			}
 		});
 		// TODO: render everything!
 	}
@@ -173,40 +215,44 @@ impl Metra {
 	#[must_use]
 	#[inline]
 	pub fn time(&self) -> f64 {
-		unsafe { sys::sys_get_time() }
+		unsafe { sys::get_time() }
 	}
 
 	/// Returns a pseudo-random number from 0 to 1.
 	#[must_use]
 	#[inline]
 	pub fn random(&self) -> f64 {
-		unsafe { sys::sys_get_random() }
+		unsafe { sys::get_random() }
 	}
 
+	#[must_use]
+	#[inline]
 	pub fn unit_quad(&self) -> Asset<Model> {
 		self.unit_quad.clone()
 	}
 
+	#[must_use]
+	#[inline]
 	pub fn new_unit_mesh(&mut self) -> Resource<Mesh> {
-		self.new_mesh(self.unit_quad.clone(), self.default_fragment.clone())
+		self.new_mesh(self.unit_quad.clone(), self.default_material.clone())
 	}
 
 	#[must_use]
-	pub fn new_mesh(&mut self, model: Asset<Model>, shader: Asset<Shader>) -> Resource<Mesh> {
-		let (resource, ptr) = Resource::new(Mesh::new(
-			model,
-			self.universal_vertex.clone(),
-			shader.clone(),
-		));
+	pub fn new_mesh(&mut self, model: Asset<Model>, material: Asset<Material>) -> Resource<Mesh> {
+		let (resource, ptr) = Resource::new(Mesh::new(model, material.clone()));
 		self.meshes.push(ptr);
 		resource
 	}
 
 	#[must_use]
-	pub fn new_light(&mut self, source: LightSource) -> Light {
-		Light { source }
+	pub fn new_light(&mut self, x: f32, y: f32) -> Resource<Light> {
+		let (resource, ptr) = Resource::new(Light { x, y });
+		self.lights.push(ptr);
+		resource
 	}
 
+	/// Writes a buffer to the persistent data store.
+	/// Returns 1 on success, or 0 otherwise.
 	#[must_use]
 	pub fn save_persistent(&mut self, data: &[u8]) -> bool {
 		unsafe {
@@ -217,6 +263,7 @@ impl Metra {
 		}
 	}
 
+	/// Returns
 	#[must_use]
 	pub fn load_persistent(&self) -> Option<Box<[u8]>> {
 		unsafe {
@@ -254,56 +301,109 @@ impl Drop for Metra {
 	}
 }
 
-pub struct Buffer {}
+struct Buffer<T: Copy> {
+	data: Option<Box<[T]>>,
+	handle: NonZeroU32,
+	buffer_type: sys::BufferType,
+}
+
+impl<T: Copy> Buffer<T> {
+	fn new(buffer_type: sys::BufferType, data: Option<&[T]>) -> Self {
+		unsafe {
+			let handle = sys::create_buffer();
+
+			let data: Option<Box<[T]>> = data.map(Box::from);
+
+			if let Some(data) = &data {
+				sys::bind_buffer(handle, buffer_type);
+				sys::upload_buffer_data(
+					buffer_type,
+					data.as_ptr() as u32,
+					size_of_val(data.deref()) as u32,
+				);
+			}
+
+			let this = Self {
+				data,
+				handle,
+				buffer_type,
+			};
+
+			this
+		}
+	}
+
+	fn bind(&self) {
+		unsafe {
+			sys::bind_buffer(self.handle, self.buffer_type);
+		}
+	}
+
+	fn upload(&mut self, data: &[T]) {
+		unsafe {
+			self.bind();
+			let data: Box<[T]> = Box::from(data);
+			sys::upload_buffer_data(
+				self.buffer_type,
+				data.as_ptr() as u32,
+				size_of_val(data.deref()) as u32,
+			);
+			self.data = Some(data);
+		}
+	}
+
+	fn len(&self) -> usize {
+		self.data.as_ref().map_or(0, |b| b.len())
+	}
+
+	/// Returns the size, in bytes, to the buffer.
+	fn size(&self) -> usize {
+		self.data.as_ref().map_or(0, |b| size_of_val(b.deref()))
+	}
+}
+
+impl<T: Copy> Drop for Buffer<T> {
+	fn drop(&mut self) {
+		unsafe {
+			sys::drop_buffer(self.handle);
+		}
+	}
+}
 
 pub struct Model {
-	positions: Box<[[f32; 2]]>,
-	coordinates: Box<[[f32; 2]]>,
-	indices: Box<[[u16; 3]]>,
-	// webGL specifics
-	position_handle: NonZeroU32,
-	coordinate_handle: NonZeroU32,
-	index_handle: NonZeroU32,
-	vertex_array_object: NonZeroU32,
+	positions: Buffer<[f32; 2]>,
+	coordinates: Buffer<[f32; 2]>,
+	indices: Buffer<[u16; 3]>,
+	vertex_array_handle: NonZeroU32,
 }
 
 impl Model {
 	fn new(positions: &[[f32; 2]], coordinates: &[[f32; 2]], indices: &[[u16; 3]]) -> Self {
 		unsafe {
-			let vao = sys::create_vertex_array().expect("failed to create VAO");
-			let positions: Box<[[f32; 2]]> = positions.into_iter().map(|e| *e).collect();
-			let coordinates: Box<[[f32; 2]]> = coordinates.into_iter().map(|e| *e).collect();
-			let indices: Box<[[u16; 3]]> = indices.into_iter().map(|e| *e).collect();
-			let position_handle = sys::create_buffer(
-				sys::BufferType::Array,
-				positions.as_ptr() as u32,
-				size_of_val(positions.deref()) as u32,
-			)
-			.expect("failed to create position buffer (RESOURCE LEAK)");
+			let vao = sys::create_vertex_array();
+			sys::bind_vertex_array(vao);
 
-			let coordinate_handle = sys::create_buffer(
-				sys::BufferType::Array,
-				coordinates.as_ptr() as u32,
-				size_of_val(coordinates.deref()) as u32,
-			)
-			.expect("failed to create coordinate buffer (RESOURCE LEAK)");
+			debug!("creating positions");
+			// creating a buffer also binds it. this is a quirk. just ignore it.
+			let positions = Buffer::new(sys::BufferType::Array, Some(positions));
+			positions.bind();
+			sys::enable_vertex_attrib(0);
+			sys::vertex_attrib_pointer(0, 2, 0, false);
 
-			let index_handle = sys::create_buffer(
-				sys::BufferType::Element,
-				indices.as_ptr() as u32,
-				size_of_val(indices.deref()) as u32,
-			)
-			.expect("failed to create index buffer (RESOURCE LEAK)");
+			debug!("creating coordinates");
+			let coordinates = Buffer::new(sys::BufferType::Array, Some(coordinates));
+			coordinates.bind();
+			sys::enable_vertex_attrib(1);
+			sys::vertex_attrib_pointer(1, 2, 0, false);
 
-			// todo!()
+			debug!("creating indices");
+			let indices = Buffer::new(sys::BufferType::Element, Some(indices));
+
 			Self {
 				positions,
 				coordinates,
 				indices,
-				position_handle,
-				coordinate_handle,
-				index_handle,
-				vertex_array_object: vao,
+				vertex_array_handle: vao,
 			}
 		}
 	}
@@ -313,18 +413,7 @@ impl Drop for Model {
 	fn drop(&mut self) {
 		unsafe {
 			debug!("dropping model");
-			if !sys::drop_buffer(self.position_handle) {
-				error!("Failed to drop position buffer!")
-			}
-			if !sys::drop_buffer(self.coordinate_handle) {
-				error!("Failed to drop coordinate buffer!")
-			}
-			if !sys::drop_buffer(self.index_handle) {
-				error!("Failed to drop index buffer!")
-			}
-			if !sys::drop_vertex_array(self.vertex_array_object) {
-				error!("Failed to drop vertex array!")
-			}
+			sys::drop_vertex_array(self.vertex_array_handle);
 		}
 	}
 }
@@ -333,76 +422,65 @@ impl Drop for Model {
 
 pub struct Mesh {
 	model: Asset<Model>,
-	shader: Asset<Shader>,
-	// TODO: this makes re-using shader programs impossible. This is, of course, silly.
-	// 		Fix with a shader program cache?
-	program: NonZeroU32,
+	material: Asset<Material>,
 }
 
 impl Mesh {
-	fn new(model: Asset<Model>, vertex: Asset<Shader>, fragment: Asset<Shader>) -> Self {
-		let program = unsafe {
-			sys::create_program(vertex.shader, fragment.shader)
-				.expect("Failed to create mesh shader program!")
-		};
-		Self {
-			model,
-			shader: fragment,
-			program,
-		}
+	fn new(model: Asset<Model>, material: Asset<Material>) -> Self {
+		Self { model, material }
 	}
 }
 
 impl Drop for Mesh {
 	fn drop(&mut self) {
 		debug!("dropping mesh");
-		if unsafe { !sys::drop_program(self.program) } {
-			error!("Failed to drop mesh shader program!")
-		}
 	}
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum LightSource {
-	Point,
-	Ambient,
-}
 pub struct Light {
-	source: LightSource,
+	x: f32,
+	y: f32,
 }
+
 pub struct Sound {}
+
 pub struct Texture {
 	width: u32,
 	height: u32,
 }
 
-pub struct Shader {
-	source: String,
-	shader: NonZeroU32,
+pub struct Material {
+	program: NonZeroU32,
 }
 
-impl Shader {
-	fn new(source: &str, is_vertex: bool) -> Self {
-		let source = source.to_owned();
-		let shader = unsafe {
-			sys::create_shader(
-				(!is_vertex) as u32,
-				source.as_ptr() as u32,
-				source.len() as u32,
+impl Material {
+	fn new(fragment_source: &'static str, vertex: NonZeroU32) -> Self {
+		unsafe {
+			let fragment = sys::create_shader(
+				1,
+				fragment_source.as_ptr() as u32,
+				fragment_source.len() as u32,
 			)
-			.expect("Failed to compile shader!")
-		};
-		Self { source, shader }
+			.expect("Failed to compile fragment shader!");
+			let program =
+				sys::create_program(vertex, fragment).expect("Failed to create shader program!");
+			sys::drop_shader(fragment);
+			Self { program }
+		}
+	}
+
+	fn bind(&self) {
+		unsafe {
+			sys::bind_program(self.program);
+		}
 	}
 }
 
-impl Drop for Shader {
+impl Drop for Material {
 	fn drop(&mut self) {
+		debug!("dropping material");
 		unsafe {
-			debug!("dropping shader");
-			if !sys::drop_shader(self.shader) {
-				error!("Failed to drop shader!")
-			}
+			sys::drop_program(self.program);
 		}
 	}
 }
@@ -484,8 +562,6 @@ pub fn run<T: 'static>(
 		UPDATE_FN = Some(Box::new(move || {
 			// This closure captures the engine and the game state,
 			// which at this point have known sizes.
-			engine.pre_update_internal();
-
 			match &mut game_state {
 				None => {
 					warn!("update called after game state was dropped");
@@ -499,9 +575,9 @@ pub fn run<T: 'static>(
 						game_state = None;
 						debug!("game state dropped, all assets/resources should be freed.");
 						debug!("performing final internal update");
-						engine.post_update_internal(status);
+						engine.update_internal(status);
 					} else {
-						engine.post_update_internal(status);
+						engine.update_internal(status);
 					}
 
 					status

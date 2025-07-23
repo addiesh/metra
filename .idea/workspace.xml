@@ -20,32 +20,24 @@
     </cargoProject>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1a83cd37-92f5-4610-bbee-ba3b89bc712d" name="Changes" comment="Thinking of where to go from here with the time that I have">
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/game/src/manifest" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/metra-station/src/main.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shell/maudio.mjs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shell/resources/724871__djericmark__1.wav" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shell/resources/chime-a.wav" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shell/resources/chime-b.wav" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shell/resources/chord-a.wav" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shell/resources/noise.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shell/resources/rust.gif" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shell/shadower.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shell/soundtest.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.cargo/config.toml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/metra.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/metra.iml" afterDir="false" />
+    <list default="true" id="1a83cd37-92f5-4610-bbee-ba3b89bc712d" name="Changes" comment="slight simplifications">
+      <change afterPath="$PROJECT_DIR$/shell/assets/chime-a.wav" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shell/assets/chime-b.wav" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shell/assets/chord-a.wav" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.sh" beforeDir="false" afterPath="$PROJECT_DIR$/build.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/game/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/game/src/main.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/metra-station/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/metra-station/src/main.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/metra/src/default_fragment.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/metra/src/default_fragment.glsl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/metra/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/metra/src/lib.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/metra/src/logger.rs" beforeDir="false" afterPath="$PROJECT_DIR$/metra/src/logger.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/metra/src/prelude.rs" beforeDir="false" afterPath="$PROJECT_DIR$/metra/src/prelude.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/metra/src/sys.rs" beforeDir="false" afterPath="$PROJECT_DIR$/metra/src/sys.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/metra/src/universal_vertex.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/metra/src/universal_vertex.glsl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/shell/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/shell/index.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/shell/metra.mjs" beforeDir="false" afterPath="$PROJECT_DIR$/shell/metra.mjs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/station/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/metra-station/Cargo.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/station/src/main.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/shell/resources/724871__djericmark__1.wav" beforeDir="false" afterPath="$PROJECT_DIR$/shell/assets/724871__djericmark__1.wav" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shell/resources/noise.png" beforeDir="false" afterPath="$PROJECT_DIR$/shell/assets/noise.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shell/resources/rust.gif" beforeDir="false" afterPath="$PROJECT_DIR$/shell/assets/rust.gif" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -56,8 +48,8 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="JavaScript File" />
         <option value="HTML File" />
+        <option value="JavaScript File" />
       </list>
     </option>
   </component>
@@ -85,34 +77,35 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;NIXITCH_NIXPKGS_CONFIG&quot;: &quot;&quot;,
-    &quot;NIXITCH_NIX_CONF_DIR&quot;: &quot;&quot;,
-    &quot;NIXITCH_NIX_OTHER_STORES&quot;: &quot;&quot;,
-    &quot;NIXITCH_NIX_PATH&quot;: &quot;&quot;,
-    &quot;NIXITCH_NIX_PROFILES&quot;: &quot;&quot;,
-    &quot;NIXITCH_NIX_REMOTE&quot;: &quot;&quot;,
-    &quot;NIXITCH_NIX_USER_PROFILE_DIR&quot;: &quot;&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/addie/Projects/metra/shell/resources&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;org.rust.cargo.project.model.PROJECT_DISCOVERY&quot;: &quot;true&quot;,
-    &quot;org.rust.cargo.project.model.impl.CargoExternalSystemProjectAware.subscribe.first.balloon&quot;: &quot;&quot;,
-    &quot;org.rust.first.attach.projects&quot;: &quot;true&quot;,
-    &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;editor.preferences.fonts.default&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Cargo.Test metra.executor": "Run",
+    "DefaultHtmlFileTemplate": "HTML File",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "NIXITCH_NIXPKGS_CONFIG": "",
+    "NIXITCH_NIX_CONF_DIR": "",
+    "NIXITCH_NIX_OTHER_STORES": "",
+    "NIXITCH_NIX_PATH": "",
+    "NIXITCH_NIX_PROFILES": "",
+    "NIXITCH_NIX_REMOTE": "",
+    "NIXITCH_NIX_USER_PROFILE_DIR": "",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "/home/addie/Projects/yuri",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "org.rust.cargo.project.model.PROJECT_DISCOVERY": "true",
+    "org.rust.cargo.project.model.impl.CargoExternalSystemProjectAware.subscribe.first.balloon": "",
+    "org.rust.first.attach.projects": "true",
+    "run.code.analysis.last.selected.profile": "pProject Default",
+    "settings.editor.selected.configurable": "editor.preferences.fonts.default",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/shell/resources" />
@@ -198,7 +191,14 @@
       <workItem from="1751998901144" duration="5792000" />
       <workItem from="1752117176947" duration="932000" />
       <workItem from="1752120738004" duration="3729000" />
-      <workItem from="1752207947447" duration="323000" />
+      <workItem from="1752207947447" duration="669000" />
+      <workItem from="1752633706657" duration="1880000" />
+      <workItem from="1752795477440" duration="1681000" />
+      <workItem from="1752808463682" duration="7447000" />
+      <workItem from="1752878598587" duration="2862000" />
+      <workItem from="1753005148656" duration="13516000" />
+      <workItem from="1753060547885" duration="4457000" />
+      <workItem from="1753174588951" duration="900000" />
     </task>
     <task id="LOCAL-00001" summary="Work on safety and documentation">
       <option name="closed" value="true" />
@@ -208,7 +208,23 @@
       <option name="project" value="LOCAL" />
       <updated>1750043261183</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Thinking of where to go from here with the time that I have">
+      <option name="closed" value="true" />
+      <created>1752208369839</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1752208369839</updated>
+    </task>
+    <task id="LOCAL-00003" summary="slight simplifications">
+      <option name="closed" value="true" />
+      <created>1752809115890</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1752809115890</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -228,7 +244,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Work on safety and documentation" />
     <MESSAGE value="Thinking of where to go from here with the time that I have" />
-    <option name="LAST_COMMIT_MESSAGE" value="Thinking of where to go from here with the time that I have" />
+    <MESSAGE value="slight simplifications" />
+    <option name="LAST_COMMIT_MESSAGE" value="slight simplifications" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

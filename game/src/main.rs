@@ -18,11 +18,11 @@ impl Drop for GameState {
 }
 
 fn init(engine: &mut Metra) -> GameState {
-	trace!("hello from init!");
-	error!("hello from init!");
-	warn!("hello from init!");
+	// trace!("hello from init!");
+	// error!("hello from init!");
+	// warn!("hello from init!");
 	info!("hello from init!");
-	debug!("hello from init!");
+	// debug!("hello from init!");
 
 	info!(
 		"current persistent data: {:?}",
@@ -49,8 +49,8 @@ fn init(engine: &mut Metra) -> GameState {
 fn update(_state: &mut GameState, _engine: &mut Metra) -> MetraStatus {
 	// info!("update");
 	// _engine.
-	// MetraStatus::Continue
-	MetraStatus::Stop
+	MetraStatus::Continue
+	// MetraStatus::Stop
 }
 
 metra_main! {

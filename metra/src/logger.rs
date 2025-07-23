@@ -1,4 +1,4 @@
-use crate::sys::sys_log;
+use crate::sys::log;
 use alloc::borrow::ToOwned;
 use alloc::format;
 use alloc::string::ToString;
@@ -24,7 +24,7 @@ impl Log for MetraLogger {
 			line.map(|n| n.to_string()).unwrap_or_default(),
 		);
 		unsafe {
-			sys_log(
+			log(
 				record.level().into(),
 				record.target().as_ptr() as u32,
 				record.target().len() as u32,

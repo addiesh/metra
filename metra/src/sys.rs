@@ -6,6 +6,7 @@ use core::num::NonZeroU32;
 #[unsafe(export_name = "metraVarBigEndian")]
 pub static mut METRA_HOST_BIG_ENDIAN: u32 = 0;
 
+#[derive(Copy, Clone, Eq, PartialEq)]
 #[repr(u32)]
 pub enum BufferType {
 	/// Buffer containing vertex attributes, such as vertex coordinates,
@@ -49,15 +50,17 @@ impl From<log::Level> for LogLevel {
 
 #[link(wasm_import_module = "metraSys")]
 unsafe extern "C" {
+	#[must_use]
 	#[link_name = "getRandom"]
-	pub fn sys_get_random() -> f64;
+	pub fn get_random() -> f64;
 
 	/// The time (in milliseconds) since program start.
+	#[must_use]
 	#[link_name = "getTime"]
-	pub fn sys_get_time() -> f64;
+	pub fn get_time() -> f64;
 
 	#[link_name = "log"]
-	pub fn sys_log(
+	pub fn log(
 		level: LogLevel,
 		target_ptr: u32,
 		target_len: u32,
@@ -68,31 +71,61 @@ unsafe extern "C" {
 	);
 
 	#[link_name = "createVertexArray"]
-	pub fn create_vertex_array() -> Option<NonZeroU32>;
+	pub fn create_vertex_array() -> NonZeroU32;
+	#[link_name = "bindVertexArray"]
+	pub fn bind_vertex_array(vertex_array: NonZeroU32);
 	#[link_name = "dropVertexArray"]
-	pub fn drop_vertex_array(vertex_array: NonZeroU32) -> bool;
+	pub fn drop_vertex_array(vertex_array: NonZeroU32);
 
+	#[link_name = "enableVertexAttrib"]
+	pub fn enable_vertex_attrib(attrib_index: u32) -> bool;
+
+	/**
+	 * Currently, this function
+	 * @param {number} attribIndex
+	 * @param {1|2|3|4} componentsPerAttribute
+	 * @param {0|1} componentType
+	 * @param {0|1} normalize
+	 */
+	#[link_name = "vertexAttribPointer"]
+	pub fn vertex_attrib_pointer(
+		attrib_index: u32,
+		components_per_attribute: u32,
+		component_type: u32,
+		normalize: bool,
+	);
+
+	#[must_use]
 	#[link_name = "createBuffer"]
-	pub fn create_buffer(
-		buffer_type: BufferType,
-		data_ptr: u32,
-		data_len: u32,
-	) -> Option<NonZeroU32>;
+	pub fn create_buffer() -> NonZeroU32;
+	#[link_name = "bindBuffer"]
+	pub fn bind_buffer(buffer: NonZeroU32, buffer_type: BufferType);
+	#[link_name = "uploadBufferData"]
+	pub fn upload_buffer_data(buffer_type: BufferType, data_ptr: u32, data_len: u32);
 	#[link_name = "dropBuffer"]
-	pub fn drop_buffer(buffer: NonZeroU32) -> bool;
+	pub fn drop_buffer(buffer: NonZeroU32);
 
+	#[must_use]
 	#[link_name = "createShader"]
 	pub fn create_shader(stage: u32, source_ptr: u32, source_len: u32) -> Option<NonZeroU32>;
 	#[link_name = "dropShader"]
-	pub fn drop_shader(shader: NonZeroU32) -> bool;
+	pub fn drop_shader(shader: NonZeroU32);
 
+	#[must_use]
 	#[link_name = "createProgram"]
 	pub fn create_program(vertex: NonZeroU32, fragment: NonZeroU32) -> Option<NonZeroU32>;
+	#[link_name = "bindProgram"]
+	pub fn bind_program(program: NonZeroU32);
 	#[link_name = "dropProgram"]
-	pub fn drop_program(program: NonZeroU32) -> bool;
+	pub fn drop_program(program: NonZeroU32);
 
+	#[link_name = "drawTriangles"]
+	pub fn draw_triangles(element_count: u32);
+
+	#[must_use]
 	#[link_name = "savePersistent"]
 	pub fn save_persistent(data_ptr: u32, data_len: u32) -> bool;
+	#[must_use]
 	#[link_name = "loadPersistent"]
 	pub fn load_persistent(data_ptr: u32, data_len: u32) -> u32;
 }
@@ -104,7 +137,7 @@ fn wasm_panic_handler(panic_info: &core::panic::PanicInfo) -> ! {
 	let message = format!("{}", panic_info.message());
 	let loc = panic_info.location().map(|loc| format!("{loc}"));
 	unsafe {
-		sys_log(
+		log(
 			LogLevel::Panic,
 			0,
 			0,

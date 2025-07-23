@@ -19,30 +19,35 @@
  */
 
 /**
- * @typedef {Object} MetraResourceTexture
- * @prop {"texture"} resourceType
+ * @typedef {Object} MetraAssetTexture
+ * @prop {"texture"} assetType
  * @prop {HTMLImageElement} data
  */
 
 /**
- * @typedef {Object} MetraResourceSound
- * @prop {"sound"} resourceType
+ * @typedef {Object} MetraAssetSound
+ * @prop {"sound"} assetType
  * @prop {HTMLAudioElement} data
  */
 
+/** @typedef {WebGLBuffer|WebGLProgram|WebGLShader|WebGLFramebuffer|WebGLRenderbuffer|WebGLTexture
+ * |WebGLVertexArrayObject|WebGLUniformLocation|HTMLImageElement|HTMLAudioElement} MetraResourceObject */
+
 /**
- * @typedef {MetraResourceTexture|MetraResourceSound} MetraResource
- * @prop {string} checksum A precomputed SHA-256 hash of the resource, to be compared against any manifest or source.
+ * @typedef {MetraAssetTexture|MetraAssetSound} MetraAsset
+ * @prop {string} checksum A precomputed SHA-256 hash of the asset, to be compared against any manifest or source.
  */
 
 /**
- * @typedef {Object} MetraResourceManifestEntry
- * @prop {"texture"|"sound"} resourceType The type of resource.
+ * @typedef {Object} MetraAssetManifestEntry
+ * @prop {"texture"|"sound"} assetType The type of asset.
  * TODO: add width/height hints to texture
- * @prop {string} path A path to the resource.
- * @prop {string} checksum A precomputed SHA-256 hash of the resource, to be compared against any manifest or source.
+ * @prop {string} path A path to the asset.
+ * @prop {string} checksum A precomputed SHA-256 hash of the asset, to be compared against any manifest or source.
  */
 
+/** @type {boolean} */
+const DEBUG = true;
 
 // noinspection SpellCheckingInspection
 console.log(
@@ -79,13 +84,16 @@ const canvas = document.getElementById('metra');
 /** @type {WebGL2RenderingContext} */
 const gl = canvas.getContext('webgl2');
 
+/** @type {HTMLSpanElement} */
+const overlayFps = document.getElementById('overlay-fps');
+/** @type {HTMLSpanElement} */
+const overlayMspf = document.getElementById('overlay-mspf');
 
 const context = {
 	/** @type {Metra} */
 	metra: undefined,
 
-	// TODO: this is slow, replace with something faster.
-	/** @type {Map<number, WebGLBuffer|WebGLProgram|WebGLShader|WebGLFramebuffer|WebGLRenderbuffer|WebGLTexture|WebGLVertexArrayObject>} */
+	/** @type {Map<number, MetraResourceObject>} */
 	objects: new Map(),
 };
 
@@ -113,26 +121,26 @@ let cachedSaveString = null;
 let textDecoder = new TextDecoder();
 let textEncoder = new TextEncoder();
 
-// These variables are for engine-wide resources.
-/** @type {Record<string, MetraResource>} */
-let resourceBank = {};
+// These variables are for engine-wide assets.
+/** @type {Record<string, MetraAsset>} */
+let assetBank = {};
 
-// TODO: get a resource manifest from somewhere, either embedded in the binary or exported to a separate file
-/** @type {Record<string, MetraResourceManifestEntry>} */
-let resourceManifest = {
+// TODO: get a asset manifest from somewhere, either embedded in the binary or exported to a separate file
+/** @type {Record<string, MetraAssetManifestEntry>} */
+let assetManifest = {
 	"antonymph": {
-		resourceType: 'sound',
-		path: "resources/antonymph.wav",
+		assetType: 'sound',
+		path: "assets/antonymph.wav",
 		checksum: "c44c33dc1fd8c50591cf6544c0b1aa8bf09454c7fc197334e69d0ac80d6df9c9"
 	},
 	"noise": {
-		resourceType: 'texture',
-		path: "resources/noise.png",
+		assetType: 'texture',
+		path: "assets/noise.png",
 		checksum: "7e8f8d20fea0d8645e77cb4b43678d3257c91e0ab09c6cd9e14e6d6b3676c6a1"
 	},
 	"rust": {
-		resourceType: 'texture',
-		path: "resources/rust.gif",
+		assetType: 'texture',
+		path: "assets/rust.gif",
 		checksum: "1ef8b040bbc80b5a741afe429ae3110af3cbdc8ef5b7726ca64d2d6f0afd0cf5"
 	}
 };
@@ -141,13 +149,13 @@ let resourceManifest = {
 const importObject = {
 	metraSys: {
 		/**
-		 * @param {1|2|3|4|5|6} level 
-		 * @param {number} _targetPtr 
-		 * @param {number} _targetLen 
+		 * @param {1|2|3|4|5|6} level
+		 * @param {number} _targetPtr
+		 * @param {number} _targetLen
 		 * @param {number} locationPtr
 		 * @param {number} locationLen
-		 * @param {number} contentPtr 
-		 * @param {number} contentLen 
+		 * @param {number} contentPtr
+		 * @param {number} contentLen
 		 */
 		log: function (
 			level,
@@ -229,14 +237,11 @@ const importObject = {
 		},
 
 		/**
-		 * @param {number} dataPtr 
-		 * @param {number} dataLen 
+		 * @param {number} dataPtr
+		 * @param {number} dataLen
 		 * @returns {0|1} 1 on success or 0 otherwise.
 		 */
-		savePersistent: function (
-			dataPtr,
-			dataLen,
-		) {
+		savePersistent: function (dataPtr, dataLen) {
 			try {
 				let buf = context.metra.exports.memory.buffer.slice(dataPtr, dataPtr + dataLen);
 				cachedSaveString = textDecoder.decode(buf);
@@ -249,11 +254,29 @@ const importObject = {
 			}
 		},
 
+		drawTriangles: function (elementCount) {
+			gl.drawElements(gl.TRIANGLES, elementCount, gl.UNSIGNED_SHORT, 0);
+		},
+
 		createVertexArray: function () {
-			console.warn("metraSys.createVertexArray: stub");
-			gl.createVertexArray();
-			// TODO:
-			return 0xACAB;
+			let array = gl.createVertexArray();
+			let key = findKey();
+			console.debug(`created vertex array with ID ${key}`);
+
+			context.objects.set(key, array);
+			return key;
+		},
+
+		/**
+		 * @param {number} vertexArray
+		 */
+		bindVertexArray: function (vertexArray) {
+			let obj = context.objects.get(vertexArray);
+
+			if (obj === undefined) {
+				throw Error(`Tried to bind vertex array with invalid object ID ${vertexArray}!`);
+			}
+			gl.bindVertexArray(obj);
 		},
 
 		/**
@@ -263,6 +286,7 @@ const importObject = {
 		dropVertexArray: function (vertexArray) {
 			let obj = context.objects.get(vertexArray);
 			if (obj === undefined) {
+				console.error(`Tried to drop unknown vertex array ID ${vertexArray}!`);
 				return 0;
 			} else {
 				gl.deleteVertexArray(context.objects[vertexArray]);
@@ -274,28 +298,24 @@ const importObject = {
 		},
 
 		/**
-		 * @param {0|1} shaderStage 
-		 * @param {number} sourcePtr 
+		 * @param {0|1} shaderStage
+		 * @param {number} sourcePtr
 		 * @param {number} sourceLen
 		 * @returns {number}
 		 */
-		createShader: function (
-			shaderStage,
-			sourcePtr,
-			sourceLen,
-		) {
-			let shader = gl.createShader(
-				[gl.VERTEX_SHADER, gl.FRAGMENT_SHADER][shaderStage]
-			);
+		createShader: function (shaderStage, sourcePtr, sourceLen) {
+			let shader = gl.createShader([gl.VERTEX_SHADER, gl.FRAGMENT_SHADER][shaderStage]);
 			gl.shaderSource(
 				shader,
 				textDecoder.decode(context.metra.exports.memory.buffer.slice(sourcePtr, sourcePtr + sourceLen)),
 			);
 			gl.compileShader(shader);
-			if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-				console.error(`Failed to compile ${["vertex", "fragment"][shaderStage]} shader!`, gl.getShaderInfoLog(shader));
-				gl.deleteShader(shader);
-				return 0;
+			if (DEBUG) {
+				if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+					console.error(`Failed to compile ${["vertex", "fragment"][shaderStage]} shader!`, gl.getShaderInfoLog(shader));
+					gl.deleteShader(shader);
+					return 0;
+				}
 			}
 
 			let key = findKey();
@@ -313,6 +333,7 @@ const importObject = {
 		dropShader: function (shader) {
 			let obj = context.objects.get(shader);
 			if (obj === undefined) {
+				console.error(`Tried to drop unknown shader ID ${shader}!`);
 				return 0;
 			} else {
 				gl.deleteBuffer(context.objects[shader]);
@@ -324,22 +345,21 @@ const importObject = {
 
 		/**
 		 * @param {number} vertex
-		 * @param {number} fragment 
+		 * @param {number} fragment
 		 * @returns {number}
 		 */
-		createProgram: function (
-			vertex,
-			fragment,
-		) {
+		createProgram: function (vertex, fragment) {
 			let program = gl.createProgram();
 			gl.attachShader(program, context.objects.get(vertex));
 			gl.attachShader(program, context.objects.get(fragment));
 			gl.linkProgram(program);
 
-			if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-				console.error("Failed to link shader program!", gl.getProgramInfoLog(program));
-				gl.deleteProgram(program);
-				return 0;
+			if (DEBUG) {
+				if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+					console.error("Failed to link shader program!", gl.getProgramInfoLog(program));
+					gl.deleteProgram(program);
+					return 0;
+				}
 			}
 
 			let key = findKey();
@@ -353,11 +373,23 @@ const importObject = {
 
 		/**
 		 * @param {number} program
+		 */
+		bindProgram: function (program) {
+			let obj = context.objects.get(program);
+			if (obj === undefined) {
+				throw Error(`Tried to bind/use program with invalid ID ${program}!`);
+			}
+			gl.useProgram(obj);
+		},
+
+		/**
+		 * @param {number} program
 		 * @returns {0|1}
 		 */
 		dropProgram: function (program) {
 			let obj = context.objects.get(program);
 			if (obj === undefined) {
+				console.error(`Tried to drop unknown program ID ${program}!`);
 				return 0;
 			} else {
 				gl.deleteBuffer(context.objects[program]);
@@ -368,38 +400,118 @@ const importObject = {
 		},
 
 		/**
-		 * @param {0|1|2} bufferType 
-		 * @param {number} dataPtr 
-		 * @param {number} dataLen 
+		 * @param {number} uniformLocation
+		 * @param {1|2|3|4} componentsPerAttribute
+		 * @param {0|1} componentType
+		 * @param {0|1} normalize
+		 */
+		setUniform: function (
+		) {
+			// layout(binding = 0) uniform MetraUniversal {
+			// 		float time;
+			// 		mat2 transform;
+			// };
+			// blockIndex = layout(binding = 0)
+			const blockIndex = gl.getUniformBlockIndex(program, "MetraUniversal");
+			gl.bindBufferBase(GL_UNIFORM_BUFFER, _matrixBufferBindingPoint, _matrixBuffer);
+			gl.uniformBlockBinding(_program, _matrixBlockLocation, _matrixBufferBindingPoint);
+			gl.bindBufferRange(
+				gl.UNIFORM_BUFFER,
+				index,
+				buffer,
+				offset,
+				size
+			);
+		},
+
+		/**
+		 * @param {number} attribIndex
+		 */
+		enableVertexAttrib: function (attribIndex) {
+			gl.enableVertexAttribArray(attribIndex);
+		},
+
+		/**
+		 * @param {number} attribIndex
+		 * @param {1|2|3|4} componentsPerAttribute
+		 * @param {0|1} componentType
+		 * @param {0|1} normalize
+		 */
+		vertexAttribPointer: function (
+			attribIndex,
+			componentsPerAttribute,
+			componentType,
+			normalize
+		) {
+			let type = [gl.FLOAT, gl.SHORT][componentType];
+			gl.vertexAttribPointer(
+				attribIndex,
+				componentsPerAttribute,
+				type,
+				!!normalize,
+				0,
+				0
+			);
+		},
+
+		/**
 		 * @returns {number}
 		 */
-		createBuffer: function (
+		createBuffer: function () {
+			let buffer = gl.createBuffer();
+
+			let key = findKey();
+
+			console.info(`created buffer with ID ${key}`);
+
+			context.objects.set(key, buffer);
+
+			return key;
+		},
+
+		/**
+		 * @param {0|1|2} bufferType
+		 * @param {number} dataPtr
+		 * @param {number} dataLen
+		 */
+		uploadBufferData: function (
 			bufferType,
 			dataPtr,
-			dataLen,
+			dataLen
 		) {
-			let buffer = gl.createBuffer();
 			// This is enum conversion.
 			let target = [gl.ARRAY_BUFFER, gl.ELEMENT_ARRAY_BUFFER, gl.UNIFORM_BUFFER][bufferType];
 			// I've designed the API in such a way that makes it impossible to really re-use buffers
-			// as the game developer, so pretty much every buffer will be STATIC_DRAW.
-			let usage = gl.STATIC_DRAW;
-			gl.bindBuffer(
-				target,
-				buffer,
-			);
+			// as the game developer, so pretty much every buffer will be STATIC_DRAW
+			let usage = (bufferType === 2) ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW;
+
+			let bugger = context.metra.exports.memory.buffer.slice(dataPtr, dataPtr + dataLen);
+
 			gl.bufferData(
 				target,
-				context.metra.exports.memory.buffer.slice(dataPtr, dataPtr + dataLen),
+				bugger,
 				usage
 			);
-			
-			let key = findKey();
 
-			console.debug(`created buffer with ID ${key}`);
+			console.info(`Uploaded ${dataLen} bytes to bound buffer`);
+			// console.info(`f32:`, new Float32Array(bugger));
+			// console.info(`u16:`, new Uint16Array(bugger));
+		},
 
-			context.objects.set(key, buffer);
-			return key;
+		/**
+		 * @param {number} buffer
+		 * @param {0|1|2} bufferType
+		 */
+		bindBuffer: function (buffer, bufferType) {
+			// enum conversion.
+			let target = [gl.ARRAY_BUFFER, gl.ELEMENT_ARRAY_BUFFER, gl.UNIFORM_BUFFER][bufferType];
+			let obj = context.objects.get(buffer);
+
+			if (obj === undefined) {
+				throw Error(`Tried to bind buffer with invalid ID ${buffer}!`);
+			}
+
+			gl.bindBuffer(target, obj);
 		},
 
 		/**
@@ -409,6 +521,7 @@ const importObject = {
 		dropBuffer: function (buffer) {
 			let obj = context.objects.get(buffer);
 			if (obj === undefined) {
+				console.error(`Tried to drop unknown buffer ID ${buffer}!`);
 				return 0;
 			} else {
 				gl.deleteBuffer(context.objects[buffer]);
@@ -435,58 +548,60 @@ const importObject = {
 		console.info(`Loaded Metra WASM in ${delta}ms`);
 	});
 
-	let resourcePromise = Promise.all(Object.entries(resourceManifest).map((async value => {
-		let resourceId = value[0];
-		let resourceEntry = value[1];
-		let canonicalPath = "./" + resourceEntry.path;
-		switch (resourceEntry.resourceType) {
-			case "sound": {
-				console.info(`Loading sound file from "${canonicalPath}"`);
-				let audioElement = new Audio(canonicalPath);
-				audioElement.preload = "auto";
-				return await new Promise((resolve, reject) => {
-					audioElement.addEventListener('error', err => {
-						let delta = performance.now() - bt;
-						console.error(`Failed to load sound "${resourceId}" after ${delta}ms!`);
-						reject(err);
+	let assetPromise = Promise.all(Object.entries(assetManifest).map(
+		(async value => {
+			let assetId = value[0];
+			let assetEntry = value[1];
+			let canonicalPath = "./" + assetEntry.path;
+			switch (assetEntry.assetType) {
+				case "sound": {
+					console.info(`Loading sound file from "${canonicalPath}"`);
+					let audioElement = new Audio(canonicalPath);
+					audioElement.preload = "auto";
+					return await new Promise((resolve, reject) => {
+						audioElement.addEventListener('error', err => {
+							let delta = performance.now() - bt;
+							console.error(`Failed to load sound "${assetId}" after ${delta}ms!`);
+							reject(err);
+						});
+						audioElement.addEventListener('canplaythrough', () => {
+							let delta = performance.now() - bt;
+							console.info(`Loaded sound "${assetId}" in ${delta}ms`);
+							resolve(audioElement);
+						});
 					});
-					audioElement.addEventListener('canplaythrough', () => {
-						let delta = performance.now() - bt;
-						console.info(`Loaded sound "${resourceId}" in ${delta}ms`);
-						resolve(audioElement);
+				}
+				case "texture": {
+					console.info(`Loading texture from "${canonicalPath}"`);
+					let imgElement = new Image();
+					imgElement.src = canonicalPath;
+					return await new Promise((resolve, reject) => {
+						// let hasErrored = false;
+						// let hasLoaded = false;
+						imgElement.addEventListener('error', err => {
+							let delta = performance.now() - bt;
+							console.error(`Failed to load texture \"${assetId}\" after ${delta}ms!`);
+							reject(err);
+						});
+						imgElement.addEventListener('load', () => {
+							let delta = performance.now() - bt;
+							console.info(`Loaded texture \"${assetId}\" in ${delta}ms`);
+							resolve(imgElement);
+						});
 					});
-				});
+				}
+				default: {
+					console.error("Invalid ");
+					return null;
+				}
 			}
-			case "texture": {
-				console.info(`Loading texture from "${canonicalPath}"`);
-				let imgElement = new Image();
-				imgElement.src = canonicalPath;
-				return await new Promise((resolve, reject) => {
-					// let hasErrored = false;
-					// let hasLoaded = false;
-					imgElement.addEventListener('error', err => {
-						let delta = performance.now() - bt;
-						console.error(`Failed to load texture \"${resourceId}\" after ${delta}ms!`);
-						reject(err);
-					});
-					imgElement.addEventListener('load', () => {
-						let delta = performance.now() - bt;
-						console.info(`Loaded texture \"${resourceId}\" in ${delta}ms`);
-						resolve(imgElement);
-					});
-				});
-			}
-			default: {
-				console.error("Invalid ");
-				return null;
-			}
-		}
-	})));
+		})
+	));
 
-	// resourceBank.
+	// assetBank.
 	// noinspection JSValidateTypes
 	context.metra = (await metraSourcePromise).instance;
-	await resourcePromise;
+	await assetPromise;
 	console.groupEnd();
 
 	let totalDelta = performance.now() - bt;
@@ -528,29 +643,55 @@ let isRunning = true;
 // initialize stuff
 context.metra.exports.metraMain();
 
-function update() {
+/** @type {number[]} */
+const frametimeRingbuffer = new Array(300).fill(Infinity);
+let frametimeRingbufferIndex = 0;
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function update() {
 	// gl.viewport
-	let res = context.metra.exports.metraUpdate();
-	if (res === 0) {
-		isRunning = false;
-	}
+
+	let frameBegin = performance.now();
 
 	gl.viewport(0, 0, canvas.width, canvas.height);
 	gl.clearColor(0, 0, 0, 0);
 	gl.clear(gl.COLOR_BUFFER_BIT /* | gl.DEPTH_BUFFER_BIT */);
 	// gl.enable(gl.DEPTH_TEST);
 	// gl.enable(gl.CULL_FACE);
+	gl.disable(gl.CULL_FACE);
+
+	let res = context.metra.exports.metraUpdate();
+	if (res === 0) {
+		isRunning = false;
+	}
 
 	gl.flush();
 
-	let error = gl.getError();
-	// noinspection EqualityComparisonWithCoercionJS
-	if (error !== gl.NO_ERROR) {
-		console.error(`encountered WebGL error (code ${error})`);
+	if (DEBUG) {
+		let error = gl.getError();
+		// noinspection EqualityComparisonWithCoercionJS
+		if (error !== gl.NO_ERROR) {
+			console.error(`Encountered WebGL error (code ${error})!`);
+			return;
+		}
 	}
 
+	let frameEnd = performance.now();
+	let frameTime = frameEnd - frameBegin;
+	frametimeRingbuffer[frametimeRingbufferIndex] = frameTime;
+	frametimeRingbufferIndex = (frametimeRingbufferIndex + 1) % frametimeRingbuffer.length;
+
 	if (isRunning) {
+		let averageFrametime = frametimeRingbuffer.reduce((prev, curr) => prev + curr, 0)
+			/ frametimeRingbuffer.length;
+		let fps = 1000 / averageFrametime;
+		if (frametimeRingbufferIndex % Math.floor(frametimeRingbuffer.length / 2) === 0) {
+			overlayFps.innerText = fps.toFixed(1);
+		}
+		overlayMspf.innerText = frameTime.toString();
 		requestAnimationFrame(update);
+
 	} else {
 		context.metra.exports.metraClean();
 	}

@@ -28,6 +28,7 @@
 		canvas#metra>* {
 			margin: 8px;
 			font-family: 'Inter Display', system-ui;
+            font-feature-settings: 'liga' 1, 'calt' 1;
 		}
 
 		canvas#metra {
@@ -41,7 +42,30 @@
 			-ms-touch-action: none;
 		}
 
-		@media (prefers-color-scheme: light) {
+		div#overlay {
+			font-size: 16pt;
+            font-family: 'Inter Display', system-ui;
+            font-feature-settings: 'liga' 1, 'calt' 1, 'tnum' 1;
+			position: fixed;
+			bottom: 16px;
+			left: 16px;
+			padding: 16px;
+			background-color: #000;
+			border-radius: 4px;
+			opacity: 0.0;
+			transition: opacity 100ms ease-out;
+		}
+
+        div#overlay:hover {
+			opacity: 1.0;
+		}
+
+        div#overlay p {
+			margin-top: 2px;
+			margin-bottom: 2px;
+		}
+
+        @media (prefers-color-scheme: light) {
 			html {
 				background-color: #fff;
 				color: #000
@@ -51,16 +75,20 @@
 </head>
 
 <body>
-	<!--
-		Metra HTML shell
-		Made with Love (care) and Hate (web development)
-		(c) addie.sh 2025
-	-->
-	<canvas id="metra">
-		<h1>Metra requires JavaScript and WebGL 2</h1>
-		<p>Please enable these features if disabled (or upgrade to a browser that supports them)</p>
-		<img alt="the Metra logo" src="metra-icon.png" style="width: 256px; height: 256px;" width="512" height="512">
-	</canvas>
+<!--
+	Metra HTML shell
+	Made with Love (care) and Hate (web development)
+	(c) addie.sh 2025
+-->
+<canvas id="metra">
+	<h1>Metra requires JavaScript and WebGL 2</h1>
+	<p>Please enable these features if disabled (or upgrade to a browser that supports them)</p>
+	<img alt="the Metra logo" src="metra-icon.png" style="width: 256px; height: 256px;" width="512" height="512">
+</canvas>
+<div id="overlay">
+	<p>ms/f: &Tab;<span id="overlay-mspf">---</span></p>
+	<p>avg. FPS: &Tab;<span id="overlay-fps">---</span></p>
+</div>
 </body>
 
 <script type="module" src="metra.mjs" async></script>
